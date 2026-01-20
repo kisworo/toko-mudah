@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { ProductCard } from '@/components/pos/ProductCard';
 import { CartPanel } from '@/components/pos/CartPanel';
 import { ReceiptModal } from '@/components/pos/ReceiptModal';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search } from 'lucide-react';
 
 interface CashierPageProps {
@@ -50,7 +51,7 @@ export function CashierPage({
     <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-120px)]">
       {/* Products Section */}
       <div className="flex-1 flex flex-col min-w-0">
-        <div className="relative mb-4">
+        <div className="relative mb-4 shrink-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Cari produk atau kategori..."
@@ -60,8 +61,8 @@ export function CashierPage({
           />
         </div>
 
-        <div className="flex-1 overflow-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+        <ScrollArea className="flex-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 pr-4">
             {filteredProducts.map(product => (
               <ProductCard
                 key={product.id}
@@ -78,7 +79,7 @@ export function CashierPage({
               <p className="text-sm">Coba kata kunci lain</p>
             </div>
           )}
-        </div>
+        </ScrollArea>
       </div>
 
       {/* Cart Section */}
