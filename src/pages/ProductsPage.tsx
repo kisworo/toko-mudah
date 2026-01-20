@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { ProductForm } from '@/components/products/ProductForm';
 import { CategoryManager } from '@/components/products/CategoryManager';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Search, 
   Plus, 
@@ -13,7 +14,6 @@ import {
   Trash2,
   AlertCircle,
   Settings2,
-  Image as ImageIcon
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -28,7 +28,6 @@ import {
 import {
   Collapsible,
   CollapsibleContent,
-  CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 
 interface ProductsPageProps {
@@ -104,9 +103,9 @@ export function ProductsPage({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col h-[calc(100vh-120px)]">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between shrink-0">
         <div>
           <h1 className="text-2xl font-bold">Produk</h1>
           <p className="text-muted-foreground text-sm">
@@ -132,7 +131,7 @@ export function ProductsPage({
       {/* Category Manager */}
       <Collapsible open={showCategoryManager}>
         <CollapsibleContent>
-          <Card className="p-4 mb-4 bg-muted/30">
+          <Card className="p-4 my-4 bg-muted/30">
             <CategoryManager
               categories={categories}
               onAdd={onAddCategory}
@@ -143,7 +142,7 @@ export function ProductsPage({
       </Collapsible>
 
       {/* Search */}
-      <div className="relative">
+      <div className="relative my-4 shrink-0">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Cari produk..."
@@ -153,18 +152,20 @@ export function ProductsPage({
         />
       </div>
 
-      {/* Products by Category */}
-      {Object.entries(productsByCategory).map(([categoryName, categoryProducts]) => (
-        <div key={categoryName} className="space-y-3">
-          <div className="flex items-center gap-2">
-            <div 
-              className="w-3 h-3 rounded-full" 
-              style={{ backgroundColor: getCategoryColor(categoryName) }}
-            />
-            <h2 className="text-lg font-semibold text-muted-foreground">{categoryName}</h2>
-            <span className="text-sm text-muted-foreground">({categoryProducts.length})</span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      {/* Products by Category - Scrollable */}
+      <ScrollArea className="flex-1">
+        <div className="space-y-6 pr-4">
+          {Object.entries(productsByCategory).map(([categoryName, categoryProducts]) => (
+            <div key={categoryName} className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div 
+                  className="w-3 h-3 rounded-full" 
+                  style={{ backgroundColor: getCategoryColor(categoryName) }}
+                />
+                <h2 className="text-lg font-semibold text-muted-foreground">{categoryName}</h2>
+                <span className="text-sm text-muted-foreground">({categoryProducts.length})</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {categoryProducts.map(product => (
               <Card key={product.id} className="p-4 animate-fade-in overflow-hidden">
                 <div className="flex items-start gap-3">
@@ -212,15 +213,17 @@ export function ProductsPage({
             ))}
           </div>
         </div>
-      ))}
+          ))}
 
-      {filteredProducts.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground">
-          <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
-          <p>Belum ada produk</p>
-          <p className="text-sm">Klik tombol "Tambah Produk" untuk memulai</p>
+          {filteredProducts.length === 0 && (
+            <div className="text-center py-12 text-muted-foreground">
+              <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <p>Belum ada produk</p>
+              <p className="text-sm">Klik tombol "Tambah Produk" untuk memulai</p>
+            </div>
+          )}
         </div>
-      )}
+      </ScrollArea>
 
       {/* Product Form Modal */}
       <ProductForm

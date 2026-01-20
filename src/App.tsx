@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,12 +8,17 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { CashierPage } from "@/pages/CashierPage";
 import { ProductsPage } from "@/pages/ProductsPage";
 import { TransactionsPage } from "@/pages/TransactionsPage";
+import { SettingsModal } from "@/components/settings/SettingsModal";
 import { useStore } from "@/hooks/useStore";
+import { useStoreSettings } from "@/hooks/useStoreSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 function AppContent() {
+  const [showSettings, setShowSettings] = useState(false);
+  const { settings, updateSettings } = useStoreSettings();
+  
   const {
     products,
     categories,
@@ -34,7 +40,10 @@ function AppContent() {
   } = useStore();
 
   return (
-    <AppLayout>
+    <AppLayout 
+      settings={settings} 
+      onOpenSettings={() => setShowSettings(true)}
+    >
       <Routes>
         <Route
           path="/"
@@ -73,6 +82,13 @@ function AppContent() {
         />
         <Route path="*" element={<NotFound />} />
       </Routes>
+
+      <SettingsModal
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+        settings={settings}
+        onUpdateSettings={updateSettings}
+      />
     </AppLayout>
   );
 }

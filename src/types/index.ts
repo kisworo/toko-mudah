@@ -33,3 +33,13 @@ export interface Transaction {
   date: Date;
   paymentMethod: 'cash' | 'transfer';
 }
+
+export type ThemeTone = 'green' | 'blue' | 'purple' | 'orange' | 'rose';
+
+export interface StoreSettings {
+  storeName: string;
+  storeAddress?: string;
+  storePhone?: string;
+  themeTone: ThemeTone;
+  backgroundImage?: string;
+}
