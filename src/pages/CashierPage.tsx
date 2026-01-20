@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Product, Transaction } from '@/types';
+import { Product, Customer, Transaction } from '@/types';
 import { Input } from '@/components/ui/input';
 import { ProductCard } from '@/components/pos/ProductCard';
 import { CartPanel } from '@/components/pos/CartPanel';
@@ -8,21 +8,27 @@ import { Search } from 'lucide-react';
 
 interface CashierPageProps {
   products: Product[];
+  customers: Customer[];
   cart: { id: string; name: string; price: number; stock: number; category: string; quantity: number }[];
   onAddToCart: (product: Product) => void;
   onUpdateQuantity: (id: string, quantity: number) => void;
   onRemoveFromCart: (id: string) => void;
-  onCheckout: (customer?: { name: string; phone?: string }, paymentMethod?: 'cash' | 'transfer') => Transaction;
+  onCheckout: (customer?: Customer, paymentMethod?: 'cash' | 'transfer', amountPaid?: number) => Transaction;
+  onFindCustomers: (query: string) => Customer[];
+  onAddCustomer: (customer: Omit<Customer, 'id'>) => Customer;
   cartTotal: number;
 }
 
 export function CashierPage({
   products,
+  customers,
   cart,
   onAddToCart,
   onUpdateQuantity,
   onRemoveFromCart,
   onCheckout,
+  onFindCustomers,
+  onAddCustomer,
   cartTotal,
 }: CashierPageProps) {
   const [search, setSearch] = useState('');
@@ -34,8 +40,8 @@ export function CashierPage({
     product.category.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleCheckout = (customer?: { name: string; phone?: string }, paymentMethod?: 'cash' | 'transfer') => {
-    const transaction = onCheckout(customer, paymentMethod);
+  const handleCheckout = (customer?: Customer, paymentMethod?: 'cash' | 'transfer', amountPaid?: number) => {
+    const transaction = onCheckout(customer, paymentMethod, amountPaid);
     setLastTransaction(transaction);
     setShowReceipt(true);
   };
@@ -79,9 +85,12 @@ export function CashierPage({
       <div className="lg:w-80 xl:w-96 shrink-0">
         <CartPanel
           items={cart}
+          customers={customers}
           onUpdateQuantity={onUpdateQuantity}
           onRemove={onRemoveFromCart}
           onCheckout={handleCheckout}
+          onFindCustomers={onFindCustomers}
+          onAddCustomer={onAddCustomer}
           total={cartTotal}
         />
       </div>
@@ -91,6 +100,7 @@ export function CashierPage({
         transaction={lastTransaction}
         open={showReceipt}
         onClose={() => setShowReceipt(false)}
+        autoPrint={true}
       />
     </div>
   );

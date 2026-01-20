@@ -1,18 +1,14 @@
-import { Routes, Route } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { CashierPage } from '@/pages/CashierPage';
-import { ProductsPage } from '@/pages/ProductsPage';
-import { TransactionsPage } from '@/pages/TransactionsPage';
 import { useStore } from '@/hooks/useStore';
 
 const Index = () => {
   const {
     products,
+    customers,
     cart,
-    transactions,
-    addProduct,
-    updateProduct,
-    deleteProduct,
+    addCustomer,
+    findCustomers,
     addToCart,
     updateCartQuantity,
     removeFromCart,
@@ -24,11 +20,14 @@ const Index = () => {
     <AppLayout>
       <CashierPage
         products={products}
+        customers={customers}
         cart={cart}
         onAddToCart={addToCart}
         onUpdateQuantity={updateCartQuantity}
         onRemoveFromCart={removeFromCart}
         onCheckout={checkout}
+        onFindCustomers={findCustomers}
+        onAddCustomer={addCustomer}
         cartTotal={getCartTotal()}
       />
     </AppLayout>

@@ -15,11 +15,14 @@ const queryClient = new QueryClient();
 function AppContent() {
   const {
     products,
+    customers,
     cart,
     transactions,
     addProduct,
     updateProduct,
     deleteProduct,
+    addCustomer,
+    findCustomers,
     addToCart,
     updateCartQuantity,
     removeFromCart,
@@ -35,11 +38,14 @@ function AppContent() {
           element={
             <CashierPage
               products={products}
+              customers={customers}
               cart={cart}
               onAddToCart={addToCart}
               onUpdateQuantity={updateCartQuantity}
               onRemoveFromCart={removeFromCart}
               onCheckout={checkout}
+              onFindCustomers={findCustomers}
+              onAddCustomer={addCustomer}
               cartTotal={getCartTotal()}
             />
           }
