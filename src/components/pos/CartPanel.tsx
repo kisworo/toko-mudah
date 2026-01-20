@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Minus, Plus, Trash2, ShoppingBag, User, Phone, Search, UserPlus, X } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, User, Phone, Search, UserPlus, X, Package } from 'lucide-react';
 
 interface CartPanelProps {
   items: CartItem[];
@@ -133,39 +133,58 @@ export function CartPanel({
           </div>
         ) : (
           items.map(item => (
-            <div key={item.id} className="flex items-center gap-3 animate-fade-in">
+            <div key={item.id} className="flex items-center gap-3 animate-fade-in p-2 bg-muted/30 rounded-lg">
+              {/* Item Image */}
+              {item.image ? (
+                <img 
+                  src={item.image} 
+                  alt={item.name}
+                  className="w-12 h-12 rounded-lg object-cover shrink-0"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-lg bg-accent flex items-center justify-center shrink-0">
+                  <Package className="h-5 w-5 text-accent-foreground" />
+                </div>
+              )}
+              
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm truncate">{item.name}</p>
                 <p className="text-sm text-primary">{formatPrice(item.price)}</p>
+                <p className="text-xs text-muted-foreground">
+                  Subtotal: {formatPrice(item.price * item.quantity)}
+                </p>
               </div>
-              <div className="flex items-center gap-1">
-                <Button
-                  size="icon"
-                  variant="outline"
-                  className="h-7 w-7"
-                  onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-                >
-                  <Minus className="h-3 w-3" />
-                </Button>
-                <span className="w-8 text-center text-sm font-medium">
-                  {item.quantity}
-                </span>
-                <Button
-                  size="icon"
-                  variant="outline"
-                  className="h-7 w-7"
-                  onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                >
-                  <Plus className="h-3 w-3" />
-                </Button>
+              
+              <div className="flex flex-col items-end gap-1">
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-7 w-7 text-destructive hover:text-destructive"
+                  className="h-6 w-6 text-destructive hover:text-destructive"
                   onClick={() => onRemove(item.id)}
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    className="h-7 w-7"
+                    onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+                  >
+                    <Minus className="h-3 w-3" />
+                  </Button>
+                  <span className="w-8 text-center text-sm font-medium">
+                    {item.quantity}
+                  </span>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    className="h-7 w-7"
+                    onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                  >
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
             </div>
           ))

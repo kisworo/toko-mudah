@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Product, Customer, Transaction } from '@/types';
+import { Product, Customer, Transaction, CartItem } from '@/types';
 import { Input } from '@/components/ui/input';
 import { ProductCard } from '@/components/pos/ProductCard';
 import { CartPanel } from '@/components/pos/CartPanel';
@@ -9,7 +9,7 @@ import { Search } from 'lucide-react';
 interface CashierPageProps {
   products: Product[];
   customers: Customer[];
-  cart: { id: string; name: string; price: number; stock: number; category: string; quantity: number }[];
+  cart: CartItem[];
   onAddToCart: (product: Product) => void;
   onUpdateQuantity: (id: string, quantity: number) => void;
   onRemoveFromCart: (id: string) => void;
