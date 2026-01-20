@@ -12,6 +12,7 @@ export interface CartItem extends Product {
 }
 
 export interface Customer {
+  id: string;
   name: string;
   phone?: string;
 }
@@ -21,6 +22,8 @@ export interface Transaction {
   items: CartItem[];
   customer?: Customer;
   total: number;
+  amountPaid: number;
+  change: number;
   date: Date;
   paymentMethod: 'cash' | 'transfer';
 }

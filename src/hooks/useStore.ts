@@ -13,8 +13,16 @@ const initialProducts: Product[] = [
   { id: '8', name: 'Keripik', price: 5000, stock: 40, category: 'Snack' },
 ];
 
+// Demo customers
+const initialCustomers: Customer[] = [
+  { id: '1', name: 'Budi Santoso', phone: '081234567890' },
+  { id: '2', name: 'Siti Rahayu', phone: '082345678901' },
+  { id: '3', name: 'Ahmad Wijaya', phone: '083456789012' },
+];
+
 export function useStore() {
   const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
@@ -33,6 +41,24 @@ export function useStore() {
   const deleteProduct = useCallback((id: string) => {
     setProducts(prev => prev.filter(p => p.id !== id));
   }, []);
+
+  const addCustomer = useCallback((customer: Omit<Customer, 'id'>) => {
+    const newCustomer: Customer = {
+      ...customer,
+      id: Date.now().toString(),
+    };
+    setCustomers(prev => [...prev, newCustomer]);
+    return newCustomer;
+  }, []);
+
+  const findCustomers = useCallback((query: string) => {
+    if (!query.trim()) return [];
+    const lowerQuery = query.toLowerCase();
+    return customers.filter(c => 
+      c.name.toLowerCase().includes(lowerQuery) ||
+      c.phone?.includes(query)
+    );
+  }, [customers]);
 
   const addToCart = useCallback((product: Product) => {
     setCart(prev => {
@@ -70,12 +96,19 @@ export function useStore() {
     return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
   }, [cart]);
 
-  const checkout = useCallback((customer?: Customer, paymentMethod: 'cash' | 'transfer' = 'cash') => {
+  const checkout = useCallback((
+    customer?: Customer, 
+    paymentMethod: 'cash' | 'transfer' = 'cash',
+    amountPaid?: number
+  ) => {
+    const total = getCartTotal();
     const transaction: Transaction = {
       id: Date.now().toString(),
       items: [...cart],
       customer,
-      total: getCartTotal(),
+      total,
+      amountPaid: amountPaid || total,
+      change: (amountPaid || total) - total,
       date: new Date(),
       paymentMethod,
     };
@@ -92,11 +125,14 @@ export function useStore() {
 
   return {
     products,
+    customers,
     cart,
     transactions,
     addProduct,
     updateProduct,
     deleteProduct,
+    addCustomer,
+    findCustomers,
     addToCart,
     updateCartQuantity,
     removeFromCart,
