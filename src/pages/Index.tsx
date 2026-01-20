@@ -1,13 +1,37 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { Routes, Route } from 'react-router-dom';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { CashierPage } from '@/pages/CashierPage';
+import { ProductsPage } from '@/pages/ProductsPage';
+import { TransactionsPage } from '@/pages/TransactionsPage';
+import { useStore } from '@/hooks/useStore';
 
 const Index = () => {
+  const {
+    products,
+    cart,
+    transactions,
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    addToCart,
+    updateCartQuantity,
+    removeFromCart,
+    getCartTotal,
+    checkout,
+  } = useStore();
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
+    <AppLayout>
+      <CashierPage
+        products={products}
+        cart={cart}
+        onAddToCart={addToCart}
+        onUpdateQuantity={updateCartQuantity}
+        onRemoveFromCart={removeFromCart}
+        onCheckout={checkout}
+        cartTotal={getCartTotal()}
+      />
+    </AppLayout>
   );
 };
 
