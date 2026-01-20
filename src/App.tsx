@@ -3,10 +3,67 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { CashierPage } from "@/pages/CashierPage";
+import { ProductsPage } from "@/pages/ProductsPage";
+import { TransactionsPage } from "@/pages/TransactionsPage";
+import { useStore } from "@/hooks/useStore";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+function AppContent() {
+  const {
+    products,
+    cart,
+    transactions,
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    addToCart,
+    updateCartQuantity,
+    removeFromCart,
+    getCartTotal,
+    checkout,
+  } = useStore();
+
+  return (
+    <AppLayout>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <CashierPage
+              products={products}
+              cart={cart}
+              onAddToCart={addToCart}
+              onUpdateQuantity={updateCartQuantity}
+              onRemoveFromCart={removeFromCart}
+              onCheckout={checkout}
+              cartTotal={getCartTotal()}
+            />
+          }
+        />
+        <Route
+          path="/products"
+          element={
+            <ProductsPage
+              products={products}
+              onAddProduct={addProduct}
+              onUpdateProduct={updateProduct}
+              onDeleteProduct={deleteProduct}
+            />
+          }
+        />
+        <Route
+          path="/transactions"
+          element={<TransactionsPage transactions={transactions} />}
+        />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </AppLayout>
+  );
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -14,11 +71,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AppContent />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
