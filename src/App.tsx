@@ -15,12 +15,15 @@ const queryClient = new QueryClient();
 function AppContent() {
   const {
     products,
+    categories,
     customers,
     cart,
     transactions,
     addProduct,
     updateProduct,
     deleteProduct,
+    addCategory,
+    deleteCategory,
     addCustomer,
     findCustomers,
     addToCart,
@@ -55,9 +58,12 @@ function AppContent() {
           element={
             <ProductsPage
               products={products}
+              categories={categories}
               onAddProduct={addProduct}
               onUpdateProduct={updateProduct}
               onDeleteProduct={deleteProduct}
+              onAddCategory={addCategory}
+              onDeleteCategory={deleteCategory}
             />
           }
         />

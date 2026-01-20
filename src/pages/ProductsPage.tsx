@@ -1,16 +1,19 @@
 import { useState } from 'react';
-import { Product } from '@/types';
+import { Product, Category } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { ProductForm } from '@/components/products/ProductForm';
+import { CategoryManager } from '@/components/products/CategoryManager';
 import { 
   Search, 
   Plus, 
   Package, 
   Pencil, 
   Trash2,
-  AlertCircle
+  AlertCircle,
+  Settings2,
+  Image as ImageIcon
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -22,24 +25,36 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
 interface ProductsPageProps {
   products: Product[];
+  categories: Category[];
   onAddProduct: (product: Omit<Product, 'id'>) => void;
   onUpdateProduct: (id: string, updates: Partial<Product>) => void;
   onDeleteProduct: (id: string) => void;
+  onAddCategory: (category: Omit<Category, 'id'>) => void;
+  onDeleteCategory: (id: string) => void;
 }
 
 export function ProductsPage({
   products,
+  categories,
   onAddProduct,
   onUpdateProduct,
   onDeleteProduct,
+  onAddCategory,
+  onDeleteCategory,
 }: ProductsPageProps) {
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -84,6 +99,10 @@ export function ProductsPage({
     return acc;
   }, {} as Record<string, Product[]>);
 
+  const getCategoryColor = (categoryName: string) => {
+    return categories.find(c => c.name === categoryName)?.color || '#6b7280';
+  };
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -94,11 +113,34 @@ export function ProductsPage({
             {products.length} produk terdaftar
           </p>
         </div>
-        <Button onClick={() => setShowForm(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Tambah Produk
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowCategoryManager(!showCategoryManager)}
+            className="gap-2"
+          >
+            <Settings2 className="h-4 w-4" />
+            Kategori
+          </Button>
+          <Button onClick={() => setShowForm(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Tambah Produk
+          </Button>
+        </div>
       </div>
+
+      {/* Category Manager */}
+      <Collapsible open={showCategoryManager}>
+        <CollapsibleContent>
+          <Card className="p-4 mb-4 bg-muted/30">
+            <CategoryManager
+              categories={categories}
+              onAdd={onAddCategory}
+              onDelete={onDeleteCategory}
+            />
+          </Card>
+        </CollapsibleContent>
+      </Collapsible>
 
       {/* Search */}
       <div className="relative">
@@ -112,16 +154,32 @@ export function ProductsPage({
       </div>
 
       {/* Products by Category */}
-      {Object.entries(productsByCategory).map(([category, categoryProducts]) => (
-        <div key={category} className="space-y-3">
-          <h2 className="text-lg font-semibold text-muted-foreground">{category}</h2>
+      {Object.entries(productsByCategory).map(([categoryName, categoryProducts]) => (
+        <div key={categoryName} className="space-y-3">
+          <div className="flex items-center gap-2">
+            <div 
+              className="w-3 h-3 rounded-full" 
+              style={{ backgroundColor: getCategoryColor(categoryName) }}
+            />
+            <h2 className="text-lg font-semibold text-muted-foreground">{categoryName}</h2>
+            <span className="text-sm text-muted-foreground">({categoryProducts.length})</span>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {categoryProducts.map(product => (
-              <Card key={product.id} className="p-4 animate-fade-in">
+              <Card key={product.id} className="p-4 animate-fade-in overflow-hidden">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent shrink-0">
-                    <Package className="h-5 w-5 text-accent-foreground" />
-                  </div>
+                  {/* Product Image or Icon */}
+                  {product.image ? (
+                    <img 
+                      src={product.image} 
+                      alt={product.name}
+                      className="w-14 h-14 rounded-lg object-cover shrink-0"
+                    />
+                  ) : (
+                    <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-accent shrink-0">
+                      <Package className="h-6 w-6 text-accent-foreground" />
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <h3 className="font-medium truncate">{product.name}</h3>
                     <p className="text-lg font-semibold text-primary">
@@ -167,6 +225,7 @@ export function ProductsPage({
       {/* Product Form Modal */}
       <ProductForm
         product={editingProduct || undefined}
+        categories={categories}
         open={showForm}
         onClose={() => {
           setShowForm(false);
