@@ -1,5 +1,13 @@
 import { useState, useCallback } from 'react';
-import { Product, CartItem, Transaction, Customer } from '@/types';
+import { Product, CartItem, Transaction, Customer, Category } from '@/types';
+
+// Demo categories
+const initialCategories: Category[] = [
+  { id: '1', name: 'Makanan', color: '#22c55e' },
+  { id: '2', name: 'Minuman', color: '#3b82f6' },
+  { id: '3', name: 'Snack', color: '#f59e0b' },
+  { id: '4', name: 'Lainnya', color: '#6b7280' },
+];
 
 // Demo products
 const initialProducts: Product[] = [
@@ -22,9 +30,28 @@ const initialCustomers: Customer[] = [
 
 export function useStore() {
   const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+
+  // Category management
+  const addCategory = useCallback((category: Omit<Category, 'id'>) => {
+    const newCategory: Category = {
+      ...category,
+      id: Date.now().toString(),
+    };
+    setCategories(prev => [...prev, newCategory]);
+    return newCategory;
+  }, []);
+
+  const updateCategory = useCallback((id: string, updates: Partial<Category>) => {
+    setCategories(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+  }, []);
+
+  const deleteCategory = useCallback((id: string) => {
+    setCategories(prev => prev.filter(c => c.id !== id));
+  }, []);
 
   const addProduct = useCallback((product: Omit<Product, 'id'>) => {
     const newProduct: Product = {
@@ -125,12 +152,16 @@ export function useStore() {
 
   return {
     products,
+    categories,
     customers,
     cart,
     transactions,
     addProduct,
     updateProduct,
     deleteProduct,
+    addCategory,
+    updateCategory,
+    deleteCategory,
     addCustomer,
     findCustomers,
     addToCart,
