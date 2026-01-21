@@ -13,6 +13,7 @@ const Index = () => {
     updateCartQuantity,
     removeFromCart,
     getCartTotal,
+    getCartTotalDiscount,
     checkout,
   } = useStore();
 
@@ -29,6 +30,7 @@ const Index = () => {
         onFindCustomers={findCustomers}
         onAddCustomer={addCustomer}
         cartTotal={getCartTotal()}
+        cartTotalDiscount={getCartTotalDiscount()}
       />
     </AppLayout>
   );

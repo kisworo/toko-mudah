@@ -18,6 +18,7 @@ interface CashierPageProps {
   onFindCustomers: (query: string) => Customer[];
   onAddCustomer: (customer: Omit<Customer, 'id'>) => Customer;
   cartTotal: number;
+  cartTotalDiscount: number;
 }
 
 export function CashierPage({
@@ -31,6 +32,7 @@ export function CashierPage({
   onFindCustomers,
   onAddCustomer,
   cartTotal,
+  cartTotalDiscount,
 }: CashierPageProps) {
   const [search, setSearch] = useState('');
   const [lastTransaction, setLastTransaction] = useState<Transaction | null>(null);
@@ -93,6 +95,7 @@ export function CashierPage({
           onFindCustomers={onFindCustomers}
           onAddCustomer={onAddCustomer}
           total={cartTotal}
+          totalDiscount={cartTotalDiscount}
         />
       </div>
 

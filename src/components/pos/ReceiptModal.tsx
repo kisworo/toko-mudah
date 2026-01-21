@@ -1,4 +1,4 @@
-import { Transaction } from '@/types';
+import { Transaction, getDiscountedPrice } from '@/types';
 import {
   Dialog,
   DialogContent,
@@ -37,15 +37,19 @@ export function ReceiptModal({ transaction, open, onClose, autoPrint = true }: R
   const generateReceiptHTML = () => {
     if (!transaction) return '';
     
-    let itemsHTML = transaction.items.map(item => `
+    let itemsHTML = transaction.items.map(item => {
+      const discountedPrice = getDiscountedPrice(item);
+      const hasDiscount = item.discountType && item.discountValue;
+      return `
       <div style="margin-bottom:4px">
-        <div>${item.name}</div>
+        <div>${item.name}${hasDiscount ? ` <span style="font-size:10px;color:#666">(Diskon)</span>` : ''}</div>
         <div style="display:flex;justify-content:space-between">
-          <span>${item.quantity} x ${formatPrice(item.price)}</span>
-          <span>${formatPrice(item.price * item.quantity)}</span>
+          <span>${item.quantity} x ${formatPrice(discountedPrice)}</span>
+          <span>${formatPrice(discountedPrice * item.quantity)}</span>
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
 
     return `
 <!DOCTYPE html>
@@ -107,6 +111,13 @@ export function ReceiptModal({ transaction, open, onClose, autoPrint = true }: R
   <div>${itemsHTML}</div>
   
   <div class="divider"></div>
+  
+  ${transaction.totalDiscount > 0 ? `
+  <div class="row small" style="color:#666">
+    <span>Total Hemat</span>
+    <span>-${formatPrice(transaction.totalDiscount)}</span>
+  </div>
+  ` : ''}
   
   <div class="row bold">
     <span>TOTAL</span>
@@ -211,18 +222,32 @@ export function ReceiptModal({ transaction, open, onClose, autoPrint = true }: R
           <div className="border-t border-dashed border-gray-400 my-2" />
 
           <div className="mb-2">
-            {transaction.items.map(item => (
-              <div key={item.id} className="mb-1">
-                <p>{item.name}</p>
-                <div className="flex justify-between">
-                  <span>{item.quantity} x {formatPrice(item.price)}</span>
-                  <span>{formatPrice(item.price * item.quantity)}</span>
+            {transaction.items.map(item => {
+              const discountedPrice = getDiscountedPrice(item);
+              const hasDiscount = item.discountType && item.discountValue;
+              return (
+                <div key={item.id} className="mb-1">
+                  <p>
+                    {item.name}
+                    {hasDiscount && <span className="text-[9px] text-gray-500 ml-1">(Diskon)</span>}
+                  </p>
+                  <div className="flex justify-between">
+                    <span>{item.quantity} x {formatPrice(discountedPrice)}</span>
+                    <span>{formatPrice(discountedPrice * item.quantity)}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="border-t border-dashed border-gray-400 my-2" />
+
+          {transaction.totalDiscount > 0 && (
+            <div className="flex justify-between text-[10px] text-gray-500">
+              <span>Total Hemat</span>
+              <span>-{formatPrice(transaction.totalDiscount)}</span>
+            </div>
+          )}
 
           <div className="flex justify-between font-bold text-sm">
             <span>TOTAL</span>

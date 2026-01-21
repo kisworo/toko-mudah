@@ -1,6 +1,7 @@
-import { Product } from '@/types';
+import { Product, getDiscountedPrice } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Plus, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -12,6 +13,8 @@ interface ProductCardProps {
 
 export function ProductCard({ product, onAdd, compact = false }: ProductCardProps) {
   const isOutOfStock = product.stock <= 0;
+  const hasDiscount = product.discountType && product.discountValue;
+  const discountedPrice = getDiscountedPrice(product);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -19,6 +22,12 @@ export function ProductCard({ product, onAdd, compact = false }: ProductCardProp
       currency: 'IDR',
       minimumFractionDigits: 0,
     }).format(price);
+  };
+
+  const getDiscountLabel = () => {
+    if (!hasDiscount) return '';
+    if (product.discountType === 'percentage') return `-${product.discountValue}%`;
+    return `-${formatPrice(product.discountValue!)}`;
   };
 
   return (
@@ -30,6 +39,16 @@ export function ProductCard({ product, onAdd, compact = false }: ProductCardProp
       )}
       onClick={() => !isOutOfStock && onAdd(product)}
     >
+      {/* Discount Badge */}
+      {hasDiscount && (
+        <Badge 
+          variant="destructive" 
+          className="absolute top-1 right-1 z-10 text-[10px] px-1.5 py-0.5"
+        >
+          {getDiscountLabel()}
+        </Badge>
+      )}
+
       <div className="flex items-center gap-3">
         {/* Product Image */}
         {product.image ? (
@@ -63,12 +82,19 @@ export function ProductCard({ product, onAdd, compact = false }: ProductCardProp
           </h3>
           <p className="text-xs text-muted-foreground mb-1">{product.category}</p>
           <div className="flex items-center justify-between">
-            <span className={cn(
-              "font-semibold text-primary",
-              compact ? "text-sm" : "text-base"
-            )}>
-              {formatPrice(product.price)}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className={cn(
+                "font-semibold text-primary",
+                compact ? "text-sm" : "text-base"
+              )}>
+                {formatPrice(discountedPrice)}
+              </span>
+              {hasDiscount && (
+                <span className="text-xs text-muted-foreground line-through">
+                  {formatPrice(product.price)}
+                </span>
+              )}
+            </div>
             <span className="text-xs text-muted-foreground">
               Stok: {product.stock}
             </span>
@@ -81,7 +107,8 @@ export function ProductCard({ product, onAdd, compact = false }: ProductCardProp
           variant="default"
           className={cn(
             "shrink-0 opacity-0 group-hover:opacity-100 transition-opacity absolute right-2",
-            compact ? "h-8 w-8" : "h-10 w-10"
+            compact ? "h-8 w-8" : "h-10 w-10",
+            hasDiscount ? "top-10" : "top-1/2 -translate-y-1/2"
           )}
           onClick={(e) => {
             e.stopPropagation();
