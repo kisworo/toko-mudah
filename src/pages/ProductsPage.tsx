@@ -167,45 +167,45 @@ export function ProductsPage({
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {categoryProducts.map(product => (
-              <Card key={product.id} className="p-4 animate-fade-in overflow-hidden">
-                <div className="flex items-start gap-3">
+              <Card key={product.id} className="p-2.5 animate-fade-in overflow-hidden">
+                <div className="flex items-center gap-2.5">
                   {/* Product Image or Icon */}
                   {product.image ? (
                     <img 
                       src={product.image} 
                       alt={product.name}
-                      className="w-14 h-14 rounded-lg object-cover shrink-0"
+                      className="w-12 h-12 rounded-md object-cover shrink-0"
                     />
                   ) : (
-                    <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-accent shrink-0">
-                      <Package className="h-6 w-6 text-accent-foreground" />
+                    <div className="flex h-12 w-12 items-center justify-center rounded-md bg-accent shrink-0">
+                      <Package className="h-5 w-5 text-accent-foreground" />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-medium truncate">{product.name}</h3>
-                    <p className="text-lg font-semibold text-primary">
+                    <h3 className="font-medium text-sm truncate">{product.name}</h3>
+                    <p className="text-base font-semibold text-primary">
                       {formatPrice(product.price)}
                     </p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       Stok: {product.stock}
                     </p>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-0.5 shrink-0">
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-8 w-8"
+                      className="h-7 w-7"
                       onClick={() => handleEdit(product)}
                     >
-                      <Pencil className="h-4 w-4" />
+                      <Pencil className="h-3.5 w-3.5" />
                     </Button>
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      className="h-7 w-7 text-destructive hover:text-destructive"
                       onClick={() => setDeletingProduct(product)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 </div>
