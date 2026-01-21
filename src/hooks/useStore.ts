@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Product, CartItem, Transaction, Customer, Category } from '@/types';
+import { Product, CartItem, Transaction, Customer, Category, getDiscountedPrice, getDiscountAmount } from '@/types';
 
 // Demo categories
 const initialCategories: Category[] = [
@@ -12,13 +12,13 @@ const initialCategories: Category[] = [
 // Demo products
 const initialProducts: Product[] = [
   { id: '1', name: 'Kopi Hitam', price: 5000, stock: 100, category: 'Minuman' },
-  { id: '2', name: 'Kopi Susu', price: 8000, stock: 50, category: 'Minuman' },
+  { id: '2', name: 'Kopi Susu', price: 8000, stock: 50, category: 'Minuman', discountType: 'percentage', discountValue: 10 },
   { id: '3', name: 'Es Teh Manis', price: 4000, stock: 80, category: 'Minuman' },
-  { id: '4', name: 'Nasi Goreng', price: 15000, stock: 30, category: 'Makanan' },
+  { id: '4', name: 'Nasi Goreng', price: 15000, stock: 30, category: 'Makanan', discountType: 'fixed', discountValue: 2000 },
   { id: '5', name: 'Mie Goreng', price: 12000, stock: 25, category: 'Makanan' },
   { id: '6', name: 'Roti Bakar', price: 10000, stock: 20, category: 'Makanan' },
   { id: '7', name: 'Gorengan', price: 2000, stock: 50, category: 'Snack' },
-  { id: '8', name: 'Keripik', price: 5000, stock: 40, category: 'Snack' },
+  { id: '8', name: 'Keripik', price: 5000, stock: 40, category: 'Snack', discountType: 'percentage', discountValue: 20 },
 ];
 
 // Demo customers
@@ -120,7 +120,11 @@ export function useStore() {
   }, []);
 
   const getCartTotal = useCallback(() => {
-    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+    return cart.reduce((total, item) => total + (getDiscountedPrice(item) * item.quantity), 0);
+  }, [cart]);
+
+  const getCartTotalDiscount = useCallback(() => {
+    return cart.reduce((total, item) => total + (getDiscountAmount(item) * item.quantity), 0);
   }, [cart]);
 
   const checkout = useCallback((
@@ -129,11 +133,13 @@ export function useStore() {
     amountPaid?: number
   ) => {
     const total = getCartTotal();
+    const totalDiscount = getCartTotalDiscount();
     const transaction: Transaction = {
       id: Date.now().toString(),
       items: [...cart],
       customer,
       total,
+      totalDiscount,
       amountPaid: amountPaid || total,
       change: (amountPaid || total) - total,
       date: new Date(),
@@ -148,7 +154,7 @@ export function useStore() {
     
     clearCart();
     return transaction;
-  }, [cart, getCartTotal, updateProduct, clearCart]);
+  }, [cart, getCartTotal, getCartTotalDiscount, updateProduct, clearCart]);
 
   return {
     products,
@@ -169,6 +175,7 @@ export function useStore() {
     removeFromCart,
     clearCart,
     getCartTotal,
+    getCartTotalDiscount,
     checkout,
   };
 }

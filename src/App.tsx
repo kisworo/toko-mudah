@@ -36,6 +36,7 @@ function AppContent() {
     updateCartQuantity,
     removeFromCart,
     getCartTotal,
+    getCartTotalDiscount,
     checkout,
   } = useStore();
 
@@ -59,6 +60,7 @@ function AppContent() {
               onFindCustomers={findCustomers}
               onAddCustomer={addCustomer}
               cartTotal={getCartTotal()}
+              cartTotalDiscount={getCartTotalDiscount()}
             />
           }
         />

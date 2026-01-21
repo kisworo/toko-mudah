@@ -11,6 +11,22 @@ export interface Product {
   stock: number;
   category: string;
   image?: string;
+  discountType?: 'percentage' | 'fixed';
+  discountValue?: number;
+}
+
+// Helper to calculate discounted price
+export function getDiscountedPrice(product: Product): number {
+  if (!product.discountType || !product.discountValue) return product.price;
+  
+  if (product.discountType === 'percentage') {
+    return Math.round(product.price * (1 - product.discountValue / 100));
+  }
+  return Math.max(0, product.price - product.discountValue);
+}
+
+export function getDiscountAmount(product: Product): number {
+  return product.price - getDiscountedPrice(product);
 }
 
 export interface CartItem extends Product {
@@ -28,6 +44,7 @@ export interface Transaction {
   items: CartItem[];
   customer?: Customer;
   total: number;
+  totalDiscount: number;
   amountPaid: number;
   change: number;
   date: Date;

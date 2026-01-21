@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ImageUploader } from './ImageUploader';
-import { Package, DollarSign, Hash, Check } from 'lucide-react';
+import { Package, DollarSign, Hash, Check, Percent, Tag } from 'lucide-react';
 
 interface ProductFormProps {
   product?: Product;
@@ -27,6 +27,8 @@ export function ProductForm({ product, categories, open, onClose, onSubmit }: Pr
   const [stock, setStock] = useState('');
   const [category, setCategory] = useState('');
   const [image, setImage] = useState<string | undefined>();
+  const [discountType, setDiscountType] = useState<'percentage' | 'fixed' | ''>('');
+  const [discountValue, setDiscountValue] = useState('');
 
   // Reset form when product changes or dialog opens
   useEffect(() => {
@@ -36,6 +38,8 @@ export function ProductForm({ product, categories, open, onClose, onSubmit }: Pr
       setStock(product?.stock?.toString() || '');
       setCategory(product?.category || categories[0]?.name || '');
       setImage(product?.image);
+      setDiscountType(product?.discountType || '');
+      setDiscountValue(product?.discountValue?.toString() || '');
     }
   }, [open, product, categories]);
 
@@ -50,6 +54,8 @@ export function ProductForm({ product, categories, open, onClose, onSubmit }: Pr
       stock: parseInt(stock),
       category,
       image,
+      discountType: discountType || undefined,
+      discountValue: discountValue ? parseInt(discountValue) : undefined,
     });
 
     onClose();
@@ -168,6 +174,74 @@ export function ProductForm({ product, categories, open, onClose, onSubmit }: Pr
               <p className="text-sm text-muted-foreground py-2">
                 Belum ada kategori. Tambahkan kategori terlebih dahulu.
               </p>
+            )}
+          </div>
+
+          {/* Discount Section */}
+          <div className="space-y-3 p-3 rounded-lg border border-dashed">
+            <div className="flex items-center gap-2">
+              <Tag className="h-4 w-4 text-primary" />
+              <Label className="text-sm font-medium">Diskon Produk (Opsional)</Label>
+            </div>
+            
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setDiscountType(discountType === 'percentage' ? '' : 'percentage')}
+                className={`
+                  flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 transition-all text-sm
+                  ${discountType === 'percentage' 
+                    ? 'border-primary bg-primary/10 text-primary' 
+                    : 'border-border hover:border-primary/50'
+                  }
+                `}
+              >
+                <Percent className="h-4 w-4" />
+                Persen
+              </button>
+              <button
+                type="button"
+                onClick={() => setDiscountType(discountType === 'fixed' ? '' : 'fixed')}
+                className={`
+                  flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 transition-all text-sm
+                  ${discountType === 'fixed' 
+                    ? 'border-primary bg-primary/10 text-primary' 
+                    : 'border-border hover:border-primary/50'
+                  }
+                `}
+              >
+                <DollarSign className="h-4 w-4" />
+                Nominal
+              </button>
+            </div>
+
+            {discountType && (
+              <div className="relative">
+                {discountType === 'percentage' ? (
+                  <Percent className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">Rp</span>
+                )}
+                <Input
+                  type="number"
+                  placeholder={discountType === 'percentage' ? 'Contoh: 10' : '5000'}
+                  value={discountValue}
+                  onChange={(e) => setDiscountValue(e.target.value)}
+                  min="0"
+                  max={discountType === 'percentage' ? '100' : undefined}
+                  className={discountType === 'fixed' ? 'pl-10 h-11' : 'pr-10 h-11'}
+                />
+                {discountType === 'percentage' && discountValue && parseInt(price) > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Harga setelah diskon: Rp {(parseInt(price) * (1 - parseInt(discountValue) / 100)).toLocaleString('id-ID')}
+                  </p>
+                )}
+                {discountType === 'fixed' && discountValue && parseInt(price) > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Harga setelah diskon: Rp {Math.max(0, parseInt(price) - parseInt(discountValue)).toLocaleString('id-ID')}
+                  </p>
+                )}
+              </div>
             )}
           </div>
 
