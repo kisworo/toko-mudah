@@ -1,3 +1,4 @@
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { 
@@ -8,7 +9,8 @@ import {
   Smartphone, 
   Printer, 
   TrendingUp,
-  Users
+  Users,
+  Check
 } from "lucide-react";
 
 export function HomePage() {
@@ -45,6 +47,44 @@ export function HomePage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section className="flex justify-center">
+        <div className="relative rounded-2xl border bg-card p-8 shadow-lg max-w-lg w-full overflow-hidden">
+          <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-4 py-1 rounded-bl-xl font-medium text-sm">
+            PROMO TERBATAS
+          </div>
+          <div className="text-center space-y-4 mb-6">
+            <h3 className="text-2xl font-bold">Paket Tahunan</h3>
+            <div className="space-y-1">
+              <p className="text-muted-foreground line-through text-lg">Rp 500.000</p>
+              <p className="text-4xl font-bold text-primary">Rp 99.000 <span className="text-base font-normal text-muted-foreground">/ tahun</span></p>
+            </div>
+            <p className="text-muted-foreground">Hemat 80% untuk akses penuh selamanya</p>
+          </div>
+          <div className="space-y-4 mb-6">
+            {[
+              "Akses Semua Fitur Premium",
+              "Unlimited Produk & Transaksi",
+              "Database Pelanggan",
+              "Laporan Penjualan Lengkap",
+              "Prioritas Support 24/7"
+            ].map((feature, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                  <Check className="h-4 w-4 text-primary" />
+                </div>
+                <span>{feature}</span>
+              </div>
+            ))}
+          </div>
+          <Link to="/register">
+            <Button className="w-full h-12 text-lg font-bold">
+              Ambil Promo Sekarang
+            </Button>
+          </Link>
         </div>
       </section>
 
