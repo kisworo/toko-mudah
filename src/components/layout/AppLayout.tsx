@@ -1,9 +1,9 @@
 import { ReactNode, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  ShoppingCart, 
-  Package, 
-  Receipt, 
+import {
+  ShoppingCart,
+  Package,
+  Receipt,
   Menu,
   X,
   Store,
@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { StoreSettings } from '@/types';
+import { api } from '@/lib/api';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -33,6 +34,8 @@ export function AppLayout({ children, settings, onOpenSettings, isAuthenticated 
 
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("user");
+    api.clearToken();
     navigate("/");
     window.location.reload();
   };

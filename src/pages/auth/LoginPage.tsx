@@ -5,25 +5,32 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Store } from "lucide-react";
-
-// Demo credentials
-const DEMO_USERNAME = "user";
-const DEMO_PASSWORD = "password";
+import { api } from "@/lib/api";
 
 export function LoginPage() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Check demo credentials
-    if (email === DEMO_USERNAME && password === DEMO_PASSWORD) {
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const response = await api.login(username, password);
+      // Store the token
+      api.setToken(response.token);
+      // Store user info
+      localStorage.setItem("user", JSON.stringify(response.user));
       localStorage.setItem("isAuthenticated", "true");
-      localStorage.setItem("user", JSON.stringify({ username: DEMO_USERNAME, isDemo: true }));
-      window.location.href = "/cashier"; // Force reload to update app state
-    } else {
-      setError("Username atau password salah. Gunakan akun demo di halaman depan.");
+      // Redirect to cashier
+      window.location.href = "/cashier";
+    } catch (err: any) {
+      setError(err.message || "Username atau password salah. Gunakan akun demo di halaman depan.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -47,14 +54,15 @@ export function LoginPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email">Username</Label>
+              <Label htmlFor="username">Username</Label>
               <Input
-                id="email"
+                id="username"
                 type="text"
                 placeholder="Masukkan username"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -67,15 +75,17 @@ export function LoginPage() {
               <Input
                 id="password"
                 type="password"
+                placeholder="Masukkan password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full">
-              Masuk
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Memproses..." : "Masuk"}
             </Button>
             <p className="text-sm text-center text-muted-foreground">
               Belum punya akun?{" "}

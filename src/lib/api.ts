@@ -54,15 +54,40 @@ export interface StoreSettings {
   background_image?: string;
 }
 
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  full_name?: string;
+  is_demo?: number;
+}
+
+export interface AuthResponse {
+  user: User;
+  token: string;
+}
+
 class ApiClient {
+  private getToken(): string | null {
+    return localStorage.getItem('auth_token');
+  }
+
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    };
+
+    // Add Authorization header if token exists
+    const token = this.getToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(url, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -71,6 +96,42 @@ class ApiClient {
     }
 
     return response.json();
+  }
+
+  // Auth
+  async login(username: string, password: string): Promise<AuthResponse> {
+    return this.request<AuthResponse>('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    });
+  }
+
+  async register(data: {
+    username: string;
+    email: string;
+    password: string;
+    fullName?: string;
+  }): Promise<AuthResponse> {
+    return this.request<AuthResponse>('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getCurrentUser(): Promise<User> {
+    return this.request<User>('/api/auth/me');
+  }
+
+  setToken(token: string): void {
+    localStorage.setItem('auth_token', token);
+  }
+
+  clearToken(): void {
+    localStorage.removeItem('auth_token');
+  }
+
+  isAuthenticated(): boolean {
+    return !!this.getToken();
   }
 
   // Categories

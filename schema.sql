@@ -86,10 +86,10 @@ CREATE TABLE IF NOT EXISTS store_settings (
 INSERT OR IGNORE INTO store_settings (id, store_name, theme_tone)
 VALUES (1, 'Toko Mudah', 'green');
 
--- Insert demo user (password: password) - hashed with bcrypt
--- This is a bcrypt hash of "password"
+-- Insert demo user (username: user, password: password)
+-- Password is hashed using PBKDF2-SHA256 with 100,000 iterations
 INSERT OR IGNORE INTO users (id, username, email, password_hash, full_name, is_demo)
-VALUES ('demo-user-id', 'user', 'demo@toko-mudah.com', '$2b$10$rKjJZzZzZzZzZzZzZzZzZe', 'Demo User', 1);
+VALUES ('demo-user-id', 'user', 'demo@toko-mudah.com', 'uz+npKjGKohgvMABRSTshg==:aO0FNCs+3vT6IqleVHLqm9jBT9Dw2S26DizzjWc1nY8=', 'Demo User', 1);
 
 -- Indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);

@@ -3,6 +3,7 @@ import { SignJwt, verifyJwt } from '@tsndr/cloudflare-worker-jwt';
 // JWT Secret - In production, this should be an environment variable
 const JWT_SECRET = 'toko-mudah-secret-key-change-in-production';
 const JWT_EXPIRY = '7d'; // Token expires in 7 days
+const PBKDF2_ITERATIONS = 100000;
 
 export interface User {
   id: string;
@@ -19,14 +20,43 @@ export interface JWTPayload {
 }
 
 /**
+ * Convert ArrayBuffer to Base64 string
+ */
+function arrayBufferToBase64(buffer: ArrayBufferLike): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary);
+}
+
+/**
+ * Convert Base64 string to Uint8Array
+ */
+function base64ToUint8Array(base64: string): Uint8Array {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+/**
  * Hash password using PBKDF2 (built into Web Crypto API)
+ * Format: salt_base64:hash_base64 (compatible with Node.js crypto format)
  * Compatible with Cloudflare Workers
  */
 export async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(password);
-  const salt = crypto.getRandomValues(new Uint8Array(16));
 
+  // Generate random salt
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const saltBase64 = arrayBufferToBase64(salt);
+
+  // Import password as key
   const keyMaterial = await crypto.subtle.importKey(
     'raw',
     data,
@@ -35,40 +65,42 @@ export async function hashPassword(password: string): Promise<string> {
     ['deriveBits']
   );
 
+  // Derive key
   const derivedBits = await crypto.subtle.deriveBits(
     {
       name: 'PBKDF2',
       salt: salt,
-      iterations: 100000,
+      iterations: PBKDF2_ITERATIONS,
       hash: 'SHA-256',
     },
     keyMaterial,
     256
   );
 
-  // Combine salt and hash for storage
-  const combined = new Uint8Array(salt.length + derivedBits.byteLength);
-  combined.set(salt);
-  combined.set(new Uint8Array(derivedBits), salt.length);
+  const hashBase64 = arrayBufferToBase64(derivedBits);
 
-  // Convert to base64 for storage
-  return btoa(String.fromCharCode(...combined));
+  // Return in format: salt:hash
+  return `${saltBase64}:${hashBase64}`;
 }
 
 /**
  * Verify password against stored hash
+ * Format: salt_base64:hash_base64
  */
 export async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
   try {
-    const combined = atob(storedHash);
-    const combinedArray = new Uint8Array(combined.length);
-    for (let i = 0; i < combined.length; i++) {
-      combinedArray[i] = combined.charCodeAt(i);
+    // Parse stored hash
+    const parts = storedHash.split(':');
+    if (parts.length !== 2) {
+      return false;
     }
 
-    const salt = combinedArray.slice(0, 16);
-    const storedHashBits = combinedArray.slice(16);
+    const [saltBase64, storedHashBase64] = parts;
 
+    // Convert base64 back to binary
+    const salt = base64ToUint8Array(saltBase64);
+
+    // Import password as key
     const encoder = new TextEncoder();
     const data = encoder.encode(password);
 
@@ -80,31 +112,22 @@ export async function verifyPassword(password: string, storedHash: string): Prom
       ['deriveBits']
     );
 
+    // Derive key with the same salt
     const derivedBits = await crypto.subtle.deriveBits(
       {
         name: 'PBKDF2',
         salt: salt,
-        iterations: 100000,
+        iterations: PBKDF2_ITERATIONS,
         hash: 'SHA-256',
       },
       keyMaterial,
       256
     );
 
-    const derivedArray = new Uint8Array(derivedBits);
+    const computedHashBase64 = arrayBufferToBase64(derivedBits);
 
-    // Compare hashes
-    if (derivedArray.length !== storedHashBits.length) {
-      return false;
-    }
-
-    for (let i = 0; i < derivedArray.length; i++) {
-      if (derivedArray[i] !== storedHashBits[i]) {
-        return false;
-      }
-    }
-
-    return true;
+    // Compare hashes using timing-safe comparison
+    return computedHashBase64 === storedHashBase64;
   } catch {
     return false;
   }

@@ -1,3 +1,5 @@
+import { hashPassword, verifyPassword, generateToken, extractToken, verifyToken } from './auth';
+
 interface Env {
   DB: D1Database;
   ASSETS: Fetcher;
@@ -7,8 +9,21 @@ interface Env {
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
+
+// Middleware to verify JWT token
+async function authenticateUser(request: Request): Promise<{ userId: string; username: string } | null> {
+  const authHeader = request.headers.get('Authorization');
+  const token = extractToken(authHeader);
+
+  if (!token) {
+    return null;
+  }
+
+  const payload = await verifyToken(token);
+  return payload ? { userId: payload.userId, username: payload.username } : null;
+}
 
 export default {
   async fetch(request: Request, env: Env, ctx: any): Promise<Response> {
@@ -21,6 +36,130 @@ export default {
     }
 
     try {
+      // ===== AUTH ENDPOINTS (no auth required) =====
+
+      // Register endpoint
+      if (path === '/api/auth/register' && request.method === 'POST') {
+        const data = await request.json() as any;
+        const { username, email, password, fullName } = data;
+
+        // Validate input
+        if (!username || !email || !password) {
+          return Response.json(
+            { error: 'Username, email, and password are required' },
+            { status: 400, headers: corsHeaders }
+          );
+        }
+
+        // Check if username already exists
+        const existingUser = await env.DB.prepare(
+          'SELECT id FROM users WHERE username = ? OR email = ?'
+        ).bind(username, email).first();
+
+        if (existingUser) {
+          return Response.json(
+            { error: 'Username or email already exists' },
+            { status: 409, headers: corsHeaders }
+          );
+        }
+
+        // Hash password and create user
+        const passwordHash = await hashPassword(password);
+        const id = crypto.randomUUID();
+        const timestamp = new Date().toISOString();
+
+        await env.DB.prepare(
+          'INSERT INTO users (id, username, email, password_hash, full_name, is_demo, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+        ).bind(id, username, email, passwordHash, fullName || null, 0, timestamp, timestamp).run();
+
+        // Generate token
+        const user = { id, username, email, full_name: fullName, is_demo: 0 };
+        const token = await generateToken(user);
+
+        return Response.json(
+          {
+            user: { id, username, email, full_name: fullName },
+            token,
+          },
+          { headers: corsHeaders }
+        );
+      }
+
+      // Login endpoint
+      if (path === '/api/auth/login' && request.method === 'POST') {
+        const data = await request.json() as any;
+        const { username, password } = data;
+
+        // Validate input
+        if (!username || !password) {
+          return Response.json(
+            { error: 'Username and password are required' },
+            { status: 400, headers: corsHeaders }
+          );
+        }
+
+        // Find user by username or email
+        const user = await env.DB.prepare(
+          'SELECT * FROM users WHERE username = ? OR email = ?'
+        ).bind(username, username).first() as any;
+
+        if (!user) {
+          return Response.json(
+            { error: 'Invalid username or password' },
+            { status: 401, headers: corsHeaders }
+          );
+        }
+
+        // Verify password
+        const isValid = await verifyPassword(password, user.password_hash);
+        if (!isValid) {
+          return Response.json(
+            { error: 'Invalid username or password' },
+            { status: 401, headers: corsHeaders }
+          );
+        }
+
+        // Generate token
+        const token = await generateToken(user);
+
+        return Response.json(
+          {
+            user: {
+              id: user.id,
+              username: user.username,
+              email: user.email,
+              full_name: user.full_name,
+              is_demo: user.is_demo,
+            },
+            token,
+          },
+          { headers: corsHeaders }
+        );
+      }
+
+      // Get current user endpoint (requires auth)
+      if (path === '/api/auth/me' && request.method === 'GET') {
+        const authUser = await authenticateUser(request);
+        if (!authUser) {
+          return Response.json(
+            { error: 'Unauthorized' },
+            { status: 401, headers: corsHeaders }
+          );
+        }
+
+        const user = await env.DB.prepare(
+          'SELECT id, username, email, full_name, is_demo, created_at FROM users WHERE id = ?'
+        ).bind(authUser.userId).first() as any;
+
+        if (!user) {
+          return Response.json(
+            { error: 'User not found' },
+            { status: 404, headers: corsHeaders }
+          );
+        }
+
+        return Response.json(user, { headers: corsHeaders });
+      }
       // Categories API
       if (path === '/api/categories' && request.method === 'GET') {
         const { results } = await env.DB.prepare(
