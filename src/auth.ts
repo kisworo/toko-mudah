@@ -1,8 +1,8 @@
-import { SignJwt, verifyJwt } from '@tsndr/cloudflare-worker-jwt';
+import { sign, verify, type JwtPayload } from '@tsndr/cloudflare-worker-jwt';
 
 // JWT Secret - In production, this should be an environment variable
 const JWT_SECRET = 'toko-mudah-secret-key-change-in-production';
-const JWT_EXPIRY = '7d'; // Token expires in 7 days
+const JWT_EXPIRY_DAYS = 7;
 const PBKDF2_ITERATIONS = 100000;
 
 export interface User {
@@ -13,7 +13,7 @@ export interface User {
   is_demo: number;
 }
 
-export interface JWTPayload {
+export interface JwtUserPayload {
   userId: string;
   username: string;
   email: string;
@@ -137,34 +137,35 @@ export async function verifyPassword(password: string, storedHash: string): Prom
  * Generate JWT token for a user
  */
 export async function generateToken(user: User): Promise<string> {
-  const payload: JWTPayload = {
+  const now = Math.floor(Date.now() / 1000);
+  const exp = now + (JWT_EXPIRY_DAYS * 24 * 60 * 60);
+
+  const payload: JwtUserPayload & { iat: number; exp: number } = {
     userId: user.id,
     username: user.username,
     email: user.email,
+    iat: now,
+    exp: exp,
   };
 
-  return await new SignJwt(payload)
-    .setSubject(user.id)
-    .setIssuedAt()
-    .setExpirationTime(JWT_EXPIRY)
-    .sign(JWT_SECRET);
+  return await sign(payload, JWT_SECRET, { algorithm: 'HS256' });
 }
 
 /**
  * Verify JWT token and return payload
  */
-export async function verifyToken(token: string): Promise<JWTPayload | null> {
+export async function verifyToken(token: string): Promise<JwtUserPayload | null> {
   try {
-    const isValid = await verifyJwt(token, JWT_SECRET);
-    if (!isValid) {
+    const result = await verify(token, JWT_SECRET, { algorithm: 'HS256' });
+
+    if (!result) {
       return null;
     }
 
-    const payload = await verifyJwt(token, JWT_SECRET);
     return {
-      userId: payload.subject || '',
-      username: payload.payload?.username || '',
-      email: payload.payload?.email || '',
+      userId: result.payload.sub || result.payload.userId || '',
+      username: result.payload.username || '',
+      email: result.payload.email || '',
     };
   } catch {
     return null;
