@@ -50,6 +50,7 @@ function AppContent() {
     addToCart,
     updateCartQuantity,
     removeFromCart,
+    clearCart,
     getCartTotal,
     getCartTotalDiscount,
     checkout,
@@ -77,6 +78,7 @@ function AppContent() {
                 onAddToCart={addToCart}
                 onUpdateQuantity={updateCartQuantity}
                 onRemoveFromCart={removeFromCart}
+                onClearCart={clearCart}
                 onCheckout={checkout}
                 onFindCustomers={findCustomers}
                 onAddCustomer={addCustomer}

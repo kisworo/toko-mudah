@@ -14,6 +14,7 @@ interface CashierPageProps {
   onAddToCart: (product: Product) => void;
   onUpdateQuantity: (id: string, quantity: number) => void;
   onRemoveFromCart: (id: string) => void;
+  onClearCart: () => void;
   onCheckout: (customer?: Customer, paymentMethod?: 'cash' | 'transfer', amountPaid?: number) => Transaction;
   onFindCustomers: (query: string) => Customer[];
   onAddCustomer: (customer: Omit<Customer, 'id'>) => Customer;
@@ -28,6 +29,7 @@ export function CashierPage({
   onAddToCart,
   onUpdateQuantity,
   onRemoveFromCart,
+  onClearCart,
   onCheckout,
   onFindCustomers,
   onAddCustomer,
@@ -91,6 +93,7 @@ export function CashierPage({
           customers={customers}
           onUpdateQuantity={onUpdateQuantity}
           onRemove={onRemoveFromCart}
+          onClearCart={onClearCart}
           onCheckout={handleCheckout}
           onFindCustomers={onFindCustomers}
           onAddCustomer={onAddCustomer}

@@ -12,6 +12,7 @@ interface CartPanelProps {
   customers: Customer[];
   onUpdateQuantity: (id: string, quantity: number) => void;
   onRemove: (id: string) => void;
+  onClearCart: () => void;
   onCheckout: (customer?: Customer, paymentMethod?: 'cash' | 'transfer', amountPaid?: number) => void;
   onFindCustomers: (query: string) => Customer[];
   onAddCustomer: (customer: Omit<Customer, 'id'>) => Customer;
@@ -24,6 +25,7 @@ export function CartPanel({
   customers,
   onUpdateQuantity, 
   onRemove, 
+  onClearCart,
   onCheckout,
   onFindCustomers,
   onAddCustomer,
@@ -116,14 +118,25 @@ export function CartPanel({
 
   return (
     <Card className="flex flex-col h-full">
-      <div className="p-4 border-b">
+      <div className="p-4 border-b flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ShoppingBag className="h-5 w-5 text-primary" />
           <h2 className="font-semibold">Keranjang</h2>
-          <span className="ml-auto text-sm text-muted-foreground">
+          <span className="text-sm text-muted-foreground">
             {items.length} item
           </span>
         </div>
+        {items.length > 0 && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2 text-xs gap-1"
+            onClick={onClearCart}
+          >
+            <Trash2 className="h-3 w-3" />
+            Hapus Semua
+          </Button>
+        )}
       </div>
 
       {/* Cart Items */}
@@ -140,7 +153,7 @@ export function CartPanel({
             const itemPrice = getDiscountedPrice(item);
             
             return (
-              <div key={item.id} className="flex items-center gap-3 animate-fade-in p-2 bg-muted/30 rounded-lg">
+              <div key={item.id} className="relative flex items-start gap-3 animate-fade-in p-3 bg-muted/30 rounded-lg min-h-[6.5rem]">
                 {/* Item Image */}
                 {item.image ? (
                   <img 
@@ -154,56 +167,57 @@ export function CartPanel({
                   </div>
                 )}
                 
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 pr-10 pb-8">
                   <div className="flex items-center gap-1">
                     <p className="font-bold text-lg truncate">{item.name}</p>
                     {hasDiscount && (
-                      <Badge variant="destructive" className="text-[10px] px-1.5 py-0.5 h-5">
+                      <Badge variant="destructive" className="text-[10px] px-1.5 py-0.5 h-5 shrink-0">
                         {item.discountType === 'percentage' ? `-${item.discountValue}%` : `-Rp${item.discountValue?.toLocaleString('id-ID')}`}
                       </Badge>
                     )}
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 mt-1">
                     <p className="text-base font-bold text-primary">{formatPrice(itemPrice)}</p>
                     {hasDiscount && (
                       <p className="text-sm text-muted-foreground line-through">{formatPrice(item.price)}</p>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground mt-1">
                     Subtotal: {formatPrice(itemPrice * item.quantity)}
                   </p>
                 </div>
                 
-                <div className="flex flex-col items-end gap-2">
+                {/* Trash Button - Top Right */}
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="absolute top-2 right-2 h-8 w-8 text-destructive hover:text-destructive [&_svg]:size-5"
+                  onClick={() => onRemove(item.id)}
+                >
+                  <Trash2 className="h-5 w-5" />
+                </Button>
+
+                {/* Quantity Controls - Bottom Right */}
+                <div className="absolute bottom-2 right-2 flex items-center gap-1">
                   <Button
                     size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 text-destructive hover:text-destructive [&_svg]:size-5"
-                    onClick={() => onRemove(item.id)}
+                    variant="outline"
+                    className="h-9 w-9 [&_svg]:size-4"
+                    onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
                   >
-                    <Trash2 className="h-5 w-5" />
+                    <Minus className="h-4 w-4" />
                   </Button>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      className="h-9 w-9 [&_svg]:size-4"
-                      onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <span className="w-8 text-center text-base font-bold">
-                      {item.quantity}
-                    </span>
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      className="h-9 w-9 [&_svg]:size-4"
-                      onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <span className="w-8 text-center text-base font-bold">
+                    {item.quantity}
+                  </span>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    className="h-9 w-9 [&_svg]:size-4"
+                    onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             );
