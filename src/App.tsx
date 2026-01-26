@@ -5,7 +5,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { HomePage } from "@/pages/HomePage";
 import { CashierPage } from "@/pages/CashierPage";
+import { LoginPage } from "@/pages/auth/LoginPage";
+import { RegisterPage } from "@/pages/auth/RegisterPage";
+import { Navigate } from "react-router-dom";
 import { ProductsPage } from "@/pages/ProductsPage";
 import { TransactionsPage } from "@/pages/TransactionsPage";
 import { SettingsModal } from "@/components/settings/SettingsModal";
@@ -15,9 +19,20 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return <>{children}</>;
+}
+
 function AppContent() {
   const [showSettings, setShowSettings] = useState(false);
   const { settings, updateSettings } = useStoreSettings();
+  const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
   
   const {
     products,
@@ -44,43 +59,56 @@ function AppContent() {
     <AppLayout 
       settings={settings} 
       onOpenSettings={() => setShowSettings(true)}
+      isAuthenticated={isAuthenticated}
     >
       <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        
         <Route
-          path="/"
+          path="/cashier"
           element={
-            <CashierPage
-              products={products}
-              customers={customers}
-              cart={cart}
-              onAddToCart={addToCart}
-              onUpdateQuantity={updateCartQuantity}
-              onRemoveFromCart={removeFromCart}
-              onCheckout={checkout}
-              onFindCustomers={findCustomers}
-              onAddCustomer={addCustomer}
-              cartTotal={getCartTotal()}
-              cartTotalDiscount={getCartTotalDiscount()}
-            />
+            <ProtectedRoute>
+              <CashierPage
+                products={products}
+                customers={customers}
+                cart={cart}
+                onAddToCart={addToCart}
+                onUpdateQuantity={updateCartQuantity}
+                onRemoveFromCart={removeFromCart}
+                onCheckout={checkout}
+                onFindCustomers={findCustomers}
+                onAddCustomer={addCustomer}
+                cartTotal={getCartTotal()}
+                cartTotalDiscount={getCartTotalDiscount()}
+              />
+            </ProtectedRoute>
           }
         />
         <Route
           path="/products"
           element={
-            <ProductsPage
-              products={products}
-              categories={categories}
-              onAddProduct={addProduct}
-              onUpdateProduct={updateProduct}
-              onDeleteProduct={deleteProduct}
-              onAddCategory={addCategory}
-              onDeleteCategory={deleteCategory}
-            />
+            <ProtectedRoute>
+              <ProductsPage
+                products={products}
+                categories={categories}
+                onAddProduct={addProduct}
+                onUpdateProduct={updateProduct}
+                onDeleteProduct={deleteProduct}
+                onAddCategory={addCategory}
+                onDeleteCategory={deleteCategory}
+              />
+            </ProtectedRoute>
           }
         />
         <Route
           path="/transactions"
-          element={<TransactionsPage transactions={transactions} />}
+          element={
+            <ProtectedRoute>
+              <TransactionsPage transactions={transactions} />
+            </ProtectedRoute>
+          }
         />
         <Route path="*" element={<NotFound />} />
       </Routes>

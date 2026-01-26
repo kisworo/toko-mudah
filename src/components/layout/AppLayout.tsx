@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   ShoppingCart, 
   Package, 
@@ -17,17 +17,25 @@ interface AppLayoutProps {
   children: ReactNode;
   settings?: StoreSettings;
   onOpenSettings?: () => void;
+  isAuthenticated?: boolean;
 }
 
 const navItems = [
-  { path: '/', label: 'Kasir', icon: ShoppingCart },
+  { path: '/cashier', label: 'Kasir', icon: ShoppingCart },
   { path: '/products', label: 'Produk', icon: Package },
   { path: '/transactions', label: 'Riwayat', icon: Receipt },
 ];
 
-export function AppLayout({ children, settings, onOpenSettings }: AppLayoutProps) {
+export function AppLayout({ children, settings, onOpenSettings, isAuthenticated = false }: AppLayoutProps) {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem("isAuthenticated");
+    navigate("/");
+    window.location.reload();
+  };
 
   return (
     <div className="min-h-screen bg-background relative">
@@ -42,7 +50,7 @@ export function AppLayout({ children, settings, onOpenSettings }: AppLayoutProps
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur-sm shadow-sm">
         <div className="container flex h-14 items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
+          <Link to={isAuthenticated ? "/cashier" : "/"} className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
               <Store className="h-5 w-5 text-primary-foreground" />
             </div>
@@ -51,37 +59,60 @@ export function AppLayout({ children, settings, onOpenSettings }: AppLayoutProps
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-1">
-            {navItems.map(item => (
-              <Link key={item.path} to={item.path}>
+            {isAuthenticated ? (
+              <>
+                {navItems.map(item => (
+                  <Link key={item.path} to={item.path}>
+                    <Button
+                      variant={location.pathname === item.path ? 'default' : 'ghost'}
+                      size="sm"
+                      className="gap-2"
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {item.label}
+                    </Button>
+                  </Link>
+                ))}
                 <Button
-                  variant={location.pathname === item.path ? 'default' : 'ghost'}
-                  size="sm"
-                  className="gap-2"
+                  variant="ghost"
+                  size="icon"
+                  className="ml-2"
+                  onClick={onOpenSettings}
                 >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
+                  <Settings className="h-4 w-4" />
                 </Button>
-              </Link>
-            ))}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="ml-2"
-              onClick={onOpenSettings}
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={handleLogout}
+                >
+                  Keluar
+                </Button>
+              </>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link to="/login">
+                  <Button variant="ghost" size="sm">Masuk</Button>
+                </Link>
+                <Link to="/register">
+                  <Button size="sm">Daftar</Button>
+                </Link>
+              </div>
+            )}
           </nav>
 
           {/* Mobile Menu Button */}
           <div className="flex items-center gap-1 md:hidden">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onOpenSettings}
-            >
-              <Settings className="h-5 w-5" />
-            </Button>
+            {isAuthenticated && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onOpenSettings}
+              >
+                <Settings className="h-5 w-5" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -95,21 +126,41 @@ export function AppLayout({ children, settings, onOpenSettings }: AppLayoutProps
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
           <nav className="md:hidden border-t bg-card p-2 animate-fade-in">
-            {navItems.map(item => (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setMobileMenuOpen(false)}
-              >
+            {isAuthenticated ? (
+              <>
+                {navItems.map(item => (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <Button
+                      variant={location.pathname === item.path ? 'default' : 'ghost'}
+                      className="w-full justify-start gap-2 mb-1"
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {item.label}
+                    </Button>
+                  </Link>
+                ))}
                 <Button
-                  variant={location.pathname === item.path ? 'default' : 'ghost'}
-                  className="w-full justify-start gap-2 mb-1"
+                  variant="ghost"
+                  className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={handleLogout}
                 >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
+                  Keluar
                 </Button>
-              </Link>
-            ))}
+              </>
+            ) : (
+              <div className="flex flex-col gap-2 p-2">
+                <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+                  <Button variant="ghost" className="w-full justify-start">Masuk</Button>
+                </Link>
+                <Link to="/register" onClick={() => setMobileMenuOpen(false)}>
+                  <Button className="w-full justify-start">Daftar</Button>
+                </Link>
+              </div>
+            )}
           </nav>
         )}
       </header>
