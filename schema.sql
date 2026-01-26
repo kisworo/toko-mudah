@@ -1,3 +1,15 @@
+-- Users table for authentication
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE,
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  full_name TEXT,
+  is_demo INTEGER DEFAULT 0 NOT NULL CHECK(is_demo IN (0, 1)),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
 -- Categories table
 CREATE TABLE IF NOT EXISTS categories (
   id TEXT PRIMARY KEY,
@@ -74,7 +86,14 @@ CREATE TABLE IF NOT EXISTS store_settings (
 INSERT OR IGNORE INTO store_settings (id, store_name, theme_tone)
 VALUES (1, 'Toko Mudah', 'green');
 
+-- Insert demo user (password: password) - hashed with bcrypt
+-- This is a bcrypt hash of "password"
+INSERT OR IGNORE INTO users (id, username, email, password_hash, full_name, is_demo)
+VALUES ('demo-user-id', 'user', 'demo@toko-mudah.com', '$2b$10$rKjJZzZzZzZzZzZzZzZzZe', 'Demo User', 1);
+
 -- Indexes for better query performance
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 CREATE INDEX IF NOT EXISTS idx_products_stock ON products(stock);
 CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date);

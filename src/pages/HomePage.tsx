@@ -57,7 +57,7 @@ export function HomePage() {
           dan laporan lengkap dalam satu aplikasi.
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-4 mb-16 animate-scale-in">
+        <div className="flex flex-col sm:flex-row gap-4 mb-8 animate-scale-in">
           <Link to="/register">
             <Button size="lg" className="h-14 px-8 text-lg font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:scale-105">
               Mulai Gratis Sekarang
@@ -69,6 +69,22 @@ export function HomePage() {
               Demo Login
             </Button>
           </Link>
+        </div>
+
+        {/* Demo Credentials */}
+        <div className="mb-12 animate-fade-in">
+          <div className="inline-flex items-center gap-4 px-6 py-4 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-2 border-amber-500/30 rounded-2xl">
+            <div className="p-2 bg-amber-500/20 rounded-lg">
+              <Zap className="h-5 w-5 text-amber-600" />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">Akun Demo</p>
+              <p className="text-sm text-muted-foreground">
+                Username: <kbd className="px-2 py-0.5 bg-background rounded border font-mono text-sm">user</kbd>
+                {" "}| Password: <kbd className="px-2 py-0.5 bg-background rounded border font-mono text-sm">password</kbd>
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Hero Illustration */}

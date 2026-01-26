@@ -1,21 +1,30 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Store } from "lucide-react";
 
+// Demo credentials
+const DEMO_USERNAME = "user";
+const DEMO_PASSWORD = "password";
+
 export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const navigate = useNavigate();
+  const [error, setError] = useState("");
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate login
-    localStorage.setItem("isAuthenticated", "true");
-    window.location.href = "/cashier"; // Force reload to update app state
+    // Check demo credentials
+    if (email === DEMO_USERNAME && password === DEMO_PASSWORD) {
+      localStorage.setItem("isAuthenticated", "true");
+      localStorage.setItem("user", JSON.stringify({ username: DEMO_USERNAME, isDemo: true }));
+      window.location.href = "/cashier"; // Force reload to update app state
+    } else {
+      setError("Username atau password salah. Gunakan akun demo di halaman depan.");
+    }
   };
 
   return (
@@ -27,17 +36,22 @@ export function LoginPage() {
           </div>
           <CardTitle className="text-2xl">Masuk</CardTitle>
           <CardDescription>
-            Masukkan email dan password untuk masuk ke aplikasi
+            Masukkan username dan password untuk masuk ke aplikasi
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleLogin}>
           <CardContent className="space-y-4">
+            {error && (
+              <div className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                {error}
+              </div>
+            )}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Username</Label>
               <Input
                 id="email"
-                type="email"
-                placeholder="nama@email.com"
+                type="text"
+                placeholder="Masukkan username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
