@@ -167,45 +167,45 @@ export function ProductsPage({
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {categoryProducts.map(product => (
-              <Card key={product.id} className="p-2.5 animate-fade-in overflow-hidden">
-                <div className="flex items-center gap-2.5">
+              <Card key={product.id} className="p-3 animate-fade-in overflow-hidden">
+                <div className="flex items-center gap-3">
                   {/* Product Image or Icon */}
                   {product.image ? (
-                    <img 
-                      src={product.image} 
+                    <img
+                      src={product.image}
                       alt={product.name}
-                      className="w-12 h-12 rounded-md object-cover shrink-0"
+                      className="w-20 h-20 rounded-lg object-cover shrink-0"
                     />
                   ) : (
-                    <div className="flex h-12 w-12 items-center justify-center rounded-md bg-accent shrink-0">
-                      <Package className="h-5 w-5 text-accent-foreground" />
+                    <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-accent shrink-0">
+                      <Package className="h-8 w-8 text-accent-foreground" />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-sm truncate">{product.name}</h3>
-                    <p className="text-base font-semibold text-primary">
+                    <h3 className="font-bold text-lg truncate">{product.name}</h3>
+                    <p className="text-xl font-bold text-primary">
                       {formatPrice(product.price)}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       Stok: {product.stock}
                     </p>
                   </div>
-                  <div className="flex gap-0.5 shrink-0">
+                  <div className="flex shrink-0">
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-7 w-7"
+                      className="h-20 w-20 rounded-r-none [&_svg]:size-8"
                       onClick={() => handleEdit(product)}
                     >
-                      <Pencil className="h-3.5 w-3.5" />
+                      <Pencil className="h-8 w-8" />
                     </Button>
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-7 w-7 text-destructive hover:text-destructive"
+                      className="h-20 w-20 rounded-l-none text-destructive hover:text-destructive border-l-0 [&_svg]:size-8"
                       onClick={() => setDeletingProduct(product)}
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-8 w-8" />
                     </Button>
                   </div>
                 </div>

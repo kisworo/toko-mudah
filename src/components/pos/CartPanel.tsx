@@ -146,62 +146,62 @@ export function CartPanel({
                   <img 
                     src={item.image} 
                     alt={item.name}
-                    className="w-12 h-12 rounded-lg object-cover shrink-0"
+                    className="w-20 h-20 rounded-lg object-cover shrink-0"
                   />
                 ) : (
-                  <div className="w-12 h-12 rounded-lg bg-accent flex items-center justify-center shrink-0">
-                    <Package className="h-5 w-5 text-accent-foreground" />
+                  <div className="w-20 h-20 rounded-lg bg-accent flex items-center justify-center shrink-0">
+                    <Package className="h-8 w-8 text-accent-foreground" />
                   </div>
                 )}
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1">
-                    <p className="font-medium text-sm truncate">{item.name}</p>
+                    <p className="font-bold text-lg truncate">{item.name}</p>
                     {hasDiscount && (
-                      <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4">
+                      <Badge variant="destructive" className="text-[10px] px-1.5 py-0.5 h-5">
                         {item.discountType === 'percentage' ? `-${item.discountValue}%` : `-Rp${item.discountValue?.toLocaleString('id-ID')}`}
                       </Badge>
                     )}
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <p className="text-sm text-primary">{formatPrice(itemPrice)}</p>
+                    <p className="text-base font-bold text-primary">{formatPrice(itemPrice)}</p>
                     {hasDiscount && (
-                      <p className="text-xs text-muted-foreground line-through">{formatPrice(item.price)}</p>
+                      <p className="text-sm text-muted-foreground line-through">{formatPrice(item.price)}</p>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     Subtotal: {formatPrice(itemPrice * item.quantity)}
                   </p>
                 </div>
                 
-                <div className="flex flex-col items-end gap-1">
+                <div className="flex flex-col items-end gap-2">
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="h-6 w-6 text-destructive hover:text-destructive"
+                    className="h-8 w-8 text-destructive hover:text-destructive [&_svg]:size-5"
                     onClick={() => onRemove(item.id)}
                   >
-                    <Trash2 className="h-3 w-3" />
+                    <Trash2 className="h-5 w-5" />
                   </Button>
                   <div className="flex items-center gap-1">
                     <Button
                       size="icon"
                       variant="outline"
-                      className="h-7 w-7"
+                      className="h-9 w-9 [&_svg]:size-4"
                       onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
                     >
-                      <Minus className="h-3 w-3" />
+                      <Minus className="h-4 w-4" />
                     </Button>
-                    <span className="w-8 text-center text-sm font-medium">
+                    <span className="w-8 text-center text-base font-bold">
                       {item.quantity}
                     </span>
                     <Button
                       size="icon"
                       variant="outline"
-                      className="h-7 w-7"
+                      className="h-9 w-9 [&_svg]:size-4"
                       onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
                     >
-                      <Plus className="h-3 w-3" />
+                      <Plus className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>

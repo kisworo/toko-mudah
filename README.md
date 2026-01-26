@@ -62,7 +62,36 @@ This project is built with:
 
 ## How can I deploy this project?
 
+### Option 1: Deploy with Lovable
+
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+
+### Option 2: Deploy to Cloudflare Workers with D1 Database
+
+This project has been configured to deploy to Cloudflare Workers with Cloudflare D1 database.
+
+For detailed instructions, see [CLOUDFLARE_DEPLOYMENT.md](./CLOUDFLARE_DEPLOYMENT.md).
+
+Quick start:
+```bash
+# Install dependencies
+npm install
+
+# Login to Cloudflare
+npx wrangler login
+
+# Create D1 database
+npm run d1:create
+
+# Update database_id in wrangler.toml with the ID from the previous command
+
+# Run migrations and seed data
+npm run d1:migrate
+npm run d1:seed
+
+# Deploy
+npm run cf:deploy
+```
 
 ## Can I connect a custom domain to my Lovable project?
 

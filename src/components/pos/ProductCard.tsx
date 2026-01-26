@@ -57,45 +57,39 @@ export function ProductCard({ product, onAdd, compact = false }: ProductCardProp
             alt={product.name}
             className={cn(
               "rounded-lg object-cover shrink-0",
-              compact ? "w-14 h-14" : "w-16 h-16"
+              compact ? "w-20 h-20" : "w-24 h-24"
             )}
           />
         ) : (
           <div className={cn(
             "flex items-center justify-center rounded-lg bg-accent shrink-0",
-            compact ? "w-14 h-14" : "w-16 h-16"
+            compact ? "w-20 h-20" : "w-24 h-24"
           )}>
             <Package className={cn(
               "text-accent-foreground",
-              compact ? "h-6 w-6" : "h-7 w-7"
+              compact ? "h-10 w-10" : "h-12 w-12"
             )} />
           </div>
         )}
         
         {/* Product Info */}
         <div className="flex-1 min-w-0">
-          <h3 className={cn(
-            "font-medium truncate",
-            compact ? "text-sm" : "text-base"
-          )}>
+          <h3 className="font-bold truncate text-lg">
             {product.name}
           </h3>
-          <p className="text-xs text-muted-foreground mb-1">{product.category}</p>
+          <p className="text-sm text-muted-foreground mb-1">{product.category}</p>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              <span className={cn(
-                "font-semibold text-primary",
-                compact ? "text-sm" : "text-base"
-              )}>
+              <span className="font-bold text-primary text-xl">
                 {formatPrice(discountedPrice)}
               </span>
               {hasDiscount && (
-                <span className="text-xs text-muted-foreground line-through">
+                <span className="text-sm text-muted-foreground line-through">
                   {formatPrice(product.price)}
                 </span>
               )}
             </div>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-sm text-muted-foreground">
               Stok: {product.stock}
             </span>
           </div>
@@ -106,9 +100,9 @@ export function ProductCard({ product, onAdd, compact = false }: ProductCardProp
           size="icon"
           variant="default"
           className={cn(
-            "shrink-0 opacity-0 group-hover:opacity-100 transition-opacity absolute right-2",
-            compact ? "h-8 w-8" : "h-10 w-10",
-            hasDiscount ? "top-10" : "top-1/2 -translate-y-1/2"
+            "shrink-0 opacity-0 group-hover:opacity-100 transition-opacity absolute right-2 [&_svg]:size-5",
+            compact ? "h-8 w-8" : "h-9 w-9",
+            hasDiscount ? "top-9" : "top-2"
           )}
           onClick={(e) => {
             e.stopPropagation();
@@ -116,7 +110,7 @@ export function ProductCard({ product, onAdd, compact = false }: ProductCardProp
           }}
           disabled={isOutOfStock}
         >
-          <Plus className={compact ? "h-4 w-4" : "h-5 w-5"} />
+          <Plus className={compact ? "h-5 w-5" : "h-5 w-5"} />
         </Button>
       </div>
     </Card>

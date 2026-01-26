@@ -1,0 +1,173 @@
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
+export interface Category {
+  id: string;
+  name: string;
+  color?: string;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  price: number;
+  stock: number;
+  category: string;
+  image?: string;
+  discount_type?: 'percentage' | 'fixed';
+  discount_value?: number;
+}
+
+export interface Customer {
+  id: string;
+  name: string;
+  phone?: string;
+}
+
+export interface TransactionItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  discount_type?: 'percentage' | 'fixed';
+  discount_value?: number;
+}
+
+export interface Transaction {
+  id: string;
+  customer_id?: string;
+  customer_name?: string;
+  customer_phone?: string;
+  total: number;
+  total_discount: number;
+  amount_paid: number;
+  change_amount: number;
+  payment_method: 'cash' | 'transfer';
+  date: string;
+  items: TransactionItem[];
+}
+
+export interface StoreSettings {
+  store_name: string;
+  store_address?: string;
+  store_phone?: string;
+  theme_tone: 'green' | 'blue' | 'purple' | 'orange' | 'rose';
+  background_image?: string;
+}
+
+class ApiClient {
+  private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Request failed');
+    }
+
+    return response.json();
+  }
+
+  // Categories
+  getCategories(): Promise<Category[]> {
+    return this.request<Category[]>('/api/categories');
+  }
+
+  createCategory(data: Omit<Category, 'id'>): Promise<Category> {
+    return this.request<Category>('/api/categories', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  updateCategory(id: string, data: Partial<Category>): Promise<Category> {
+    return this.request<Category>(`/api/categories/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  deleteCategory(id: string): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/api/categories/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Products
+  getProducts(): Promise<Product[]> {
+    return this.request<Product[]>('/api/products');
+  }
+
+  createProduct(data: Omit<Product, 'id'>): Promise<Product> {
+    return this.request<Product>('/api/products', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  updateProduct(id: string, data: Partial<Product>): Promise<Product> {
+    return this.request<Product>(`/api/products/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  deleteProduct(id: string): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/api/products/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Customers
+  getCustomers(query?: string): Promise<Customer[]> {
+    const params = query ? `?q=${encodeURIComponent(query)}` : '';
+    return this.request<Customer[]>(`/api/customers${params}`);
+  }
+
+  createCustomer(data: Omit<Customer, 'id'>): Promise<Customer> {
+    return this.request<Customer>('/api/customers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Transactions
+  getTransactions(): Promise<Transaction[]> {
+    return this.request<Transaction[]>('/api/transactions');
+  }
+
+  createTransaction(data: {
+    items: TransactionItem[];
+    customerId?: string;
+    total: number;
+    totalDiscount: number;
+    amountPaid: number;
+    change: number;
+    paymentMethod: 'cash' | 'transfer';
+    date: string;
+  }): Promise<Transaction> {
+    return this.request<Transaction>('/api/transactions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Settings
+  getSettings(): Promise<StoreSettings> {
+    return this.request<StoreSettings>('/api/settings');
+  }
+
+  updateSettings(data: Partial<StoreSettings>): Promise<StoreSettings> {
+    return this.request<StoreSettings>('/api/settings', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+}
+
+export const api = new ApiClient();

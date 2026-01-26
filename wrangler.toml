@@ -1,0 +1,29 @@
+name = "toko-mudah"
+compatibility_date = "2024-01-01"
+main = "src/worker.ts"
+account_id = "8ceef3273825e26323d74efa0dc892ce" # Kisworodsp@gmail.com
+
+# D1 Database bindings
+[[d1_databases]]
+binding = "DB"
+database_name = "toko-mudah-db"
+database_id = "b06aa13e-54eb-433e-9999-eca941d50252"
+
+# Assets configuration for serving static files
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+
+# Build configuration
+[build]
+command = "npm run build"
+cwd = "."
+
+# Environment variables
+[vars]
+ENVIRONMENT = "production"
+
+# Development configuration
+[dev]
+port = 8788
+local_protocol = "http"
