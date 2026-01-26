@@ -72,17 +72,19 @@ class ApiClient {
     return localStorage.getItem('auth_token');
   }
 
-  private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  private async request<T>(endpoint: string, options?: RequestInit, publicEndpoint = false): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...options?.headers,
     };
 
-    // Add Authorization header if token exists
-    const token = this.getToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    // Add Authorization header if token exists and not a public endpoint
+    if (!publicEndpoint) {
+      const token = this.getToken();
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
     }
 
     const response = await fetch(url, {
@@ -99,23 +101,22 @@ class ApiClient {
   }
 
   // Auth
-  async login(username: string, password: string): Promise<AuthResponse> {
+  async login(email: string, password: string): Promise<AuthResponse> {
     return this.request<AuthResponse>('/api/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ username, password }),
-    });
+      body: JSON.stringify({ email, password }),
+    }, true); // Public endpoint
   }
 
   async register(data: {
-    username: string;
     email: string;
     password: string;
-    fullName?: string;
+    businessName?: string;
   }): Promise<AuthResponse> {
     return this.request<AuthResponse>('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
-    });
+    }, true); // Public endpoint
   }
 
   async getCurrentUser(): Promise<User> {

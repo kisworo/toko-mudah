@@ -8,6 +8,7 @@ const DEFAULT_SETTINGS: StoreSettings = {
   storePhone: '',
   themeTone: 'green',
   backgroundImage: undefined,
+  storeLogo: undefined,
 };
 
 const THEME_COLORS: Record<ThemeTone, { primary: string; accent: string; ring: string }> = {
@@ -45,6 +46,7 @@ const convertApiSettings = (s: any): StoreSettings => ({
   storePhone: s.store_phone,
   themeTone: s.theme_tone,
   backgroundImage: s.background_image,
+  storeLogo: s.store_logo,
 });
 
 export function useStoreSettings() {
@@ -90,14 +92,37 @@ export function useStoreSettings() {
     setSettings(prev => ({ ...prev, ...updates }));
 
     try {
-      const apiSettings = {
-        store_name: updates.storeName || settings.storeName,
-        store_address: updates.storeAddress || settings.storeAddress,
-        store_phone: updates.storePhone || settings.storePhone,
-        theme_tone: updates.themeTone || settings.themeTone,
-        background_image: updates.backgroundImage !== undefined ? updates.backgroundImage : settings.backgroundImage,
-      };
-      await api.updateSettings(apiSettings as any);
+      // Only send fields that are being updated
+      const apiSettings: any = {};
+
+      if (updates.storeName !== undefined) {
+        apiSettings.store_name = updates.storeName;
+      }
+      if (updates.storeAddress !== undefined) {
+        apiSettings.store_address = updates.storeAddress === '' ? null : updates.storeAddress;
+      }
+      if (updates.storePhone !== undefined) {
+        apiSettings.store_phone = updates.storePhone === '' ? null : updates.storePhone;
+      }
+      if (updates.themeTone !== undefined) {
+        apiSettings.theme_tone = updates.themeTone;
+      }
+      if (updates.backgroundImage !== undefined) {
+        apiSettings.background_image = updates.backgroundImage || null;
+      }
+      if (updates.storeLogo !== undefined) {
+        apiSettings.store_logo = updates.storeLogo || null;
+      }
+
+      // Filter out undefined values
+      Object.keys(apiSettings).forEach(key => {
+        if (apiSettings[key] === undefined) {
+          delete apiSettings[key];
+        }
+      });
+
+      console.log('Sending to API:', JSON.stringify(apiSettings).substring(0, 200));
+      await api.updateSettings(apiSettings);
     } catch (error) {
       console.error('Error updating settings:', error);
       // Revert on error? For now, we just log it.

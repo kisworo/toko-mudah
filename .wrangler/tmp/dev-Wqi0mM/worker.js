@@ -1,7 +1,7 @@
 var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
-// .wrangler/tmp/bundle-SualXW/checked-fetch.js
+// .wrangler/tmp/bundle-W10oN8/checked-fetch.js
 var urls = /* @__PURE__ */ new Set();
 function checkURL(request, init) {
   const url = request instanceof URL ? request : new URL(
@@ -322,7 +322,8 @@ __name(extractToken, "extractToken");
 var corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization"
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Cache-Control": "no-store, no-cache, must-revalidate, private"
 };
 async function authenticateUser(request) {
   const authHeader = request.headers.get("Authorization");
@@ -334,6 +335,11 @@ async function authenticateUser(request) {
   return payload ? { userId: payload.userId, username: payload.username } : null;
 }
 __name(authenticateUser, "authenticateUser");
+async function requireAuth(request) {
+  const authUser = await authenticateUser(request);
+  return authUser ? authUser.userId : null;
+}
+__name(requireAuth, "requireAuth");
 var worker_default = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -344,33 +350,34 @@ var worker_default = {
     try {
       if (path === "/api/auth/register" && request.method === "POST") {
         const data = await request.json();
-        const { username, email, password, fullName } = data;
-        if (!username || !email || !password) {
+        const { email, password, businessName } = data;
+        if (!email || !password) {
           return Response.json(
-            { error: "Username, email, and password are required" },
+            { error: "Email and password are required" },
             { status: 400, headers: corsHeaders }
           );
         }
         const existingUser = await env.DB.prepare(
-          "SELECT id FROM users WHERE username = ? OR email = ?"
-        ).bind(username, email).first();
+          "SELECT id FROM users WHERE email = ?"
+        ).bind(email).first();
         if (existingUser) {
           return Response.json(
-            { error: "Username or email already exists" },
+            { error: "Email already exists" },
             { status: 409, headers: corsHeaders }
           );
         }
         const passwordHash = await hashPassword(password);
         const id = crypto.randomUUID();
+        const username = email.split("@")[0];
         const timestamp = (/* @__PURE__ */ new Date()).toISOString();
         await env.DB.prepare(
           "INSERT INTO users (id, username, email, password_hash, full_name, is_demo, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-        ).bind(id, username, email, passwordHash, fullName || null, 0, timestamp, timestamp).run();
-        const user = { id, username, email, full_name: fullName, is_demo: 0 };
+        ).bind(id, username, email, passwordHash, businessName || null, 0, timestamp, timestamp).run();
+        const user = { id, username, email, full_name: businessName, is_demo: 0 };
         const token = await generateToken(user);
         return Response.json(
           {
-            user: { id, username, email, full_name: fullName },
+            user: { id, username, email, full_name: businessName },
             token
           },
           { headers: corsHeaders }
@@ -378,26 +385,26 @@ var worker_default = {
       }
       if (path === "/api/auth/login" && request.method === "POST") {
         const data = await request.json();
-        const { username, password } = data;
-        if (!username || !password) {
+        const { email, password } = data;
+        if (!email || !password) {
           return Response.json(
-            { error: "Username and password are required" },
+            { error: "Email and password are required" },
             { status: 400, headers: corsHeaders }
           );
         }
         const user = await env.DB.prepare(
-          "SELECT * FROM users WHERE username = ? OR email = ?"
-        ).bind(username, username).first();
+          "SELECT * FROM users WHERE email = ?"
+        ).bind(email).first();
         if (!user) {
           return Response.json(
-            { error: "Invalid username or password" },
+            { error: "Invalid email or password" },
             { status: 401, headers: corsHeaders }
           );
         }
         const isValid = await verifyPassword(password, user.password_hash);
         if (!isValid) {
           return Response.json(
-            { error: "Invalid username or password" },
+            { error: "Invalid email or password" },
             { status: 401, headers: corsHeaders }
           );
         }
@@ -435,46 +442,66 @@ var worker_default = {
         }
         return Response.json(user, { headers: corsHeaders });
       }
+      const userId = await requireAuth(request);
       if (path === "/api/categories" && request.method === "GET") {
+        if (!userId) {
+          return Response.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
+        }
         const { results } = await env.DB.prepare(
-          "SELECT * FROM categories ORDER BY name"
-        ).all();
+          "SELECT * FROM categories WHERE user_id = ? ORDER BY name"
+        ).bind(userId).all();
         return Response.json(results, { headers: corsHeaders });
       }
       if (path === "/api/categories" && request.method === "POST") {
+        if (!userId) {
+          return Response.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
+        }
         const data = await request.json();
         const id = Date.now().toString();
         await env.DB.prepare(
-          "INSERT INTO categories (id, name, color) VALUES (?, ?, ?)"
-        ).bind(id, data.name, data.color || null).run();
+          "INSERT INTO categories (id, user_id, name, color) VALUES (?, ?, ?, ?)"
+        ).bind(id, userId, data.name, data.color || null).run();
         return Response.json({ id, ...data }, { headers: corsHeaders });
       }
       if (path.startsWith("/api/categories/") && request.method === "PUT") {
+        if (!userId) {
+          return Response.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
+        }
         const id = path.split("/").pop();
         const data = await request.json();
         await env.DB.prepare(
-          "UPDATE categories SET name = ?, color = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
-        ).bind(data.name, data.color || null, id).run();
+          "UPDATE categories SET name = ?, color = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?"
+        ).bind(data.name, data.color || null, id, userId).run();
         return Response.json({ id, ...data }, { headers: corsHeaders });
       }
       if (path.startsWith("/api/categories/") && request.method === "DELETE") {
+        if (!userId) {
+          return Response.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
+        }
         const id = path.split("/").pop();
-        await env.DB.prepare("DELETE FROM categories WHERE id = ?").bind(id).run();
+        await env.DB.prepare("DELETE FROM categories WHERE id = ? AND user_id = ?").bind(id, userId).run();
         return Response.json({ success: true }, { headers: corsHeaders });
       }
       if (path === "/api/products" && request.method === "GET") {
+        if (!userId) {
+          return Response.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
+        }
         const { results } = await env.DB.prepare(
-          "SELECT * FROM products ORDER BY name"
-        ).all();
+          "SELECT * FROM products WHERE user_id = ? ORDER BY name"
+        ).bind(userId).all();
         return Response.json(results, { headers: corsHeaders });
       }
       if (path === "/api/products" && request.method === "POST") {
+        if (!userId) {
+          return Response.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
+        }
         const data = await request.json();
         const id = Date.now().toString();
         await env.DB.prepare(
-          "INSERT INTO products (id, name, price, stock, category, image, discount_type, discount_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+          "INSERT INTO products (id, user_id, name, price, stock, category, image, discount_type, discount_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
         ).bind(
           id,
+          userId,
           data.name,
           data.price,
           data.stock,
@@ -486,10 +513,13 @@ var worker_default = {
         return Response.json({ id, ...data }, { headers: corsHeaders });
       }
       if (path.startsWith("/api/products/") && request.method === "PUT") {
+        if (!userId) {
+          return Response.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
+        }
         const id = path.split("/").pop();
         const data = await request.json();
         await env.DB.prepare(
-          "UPDATE products SET name = ?, price = ?, stock = ?, category = ?, image = ?, discount_type = ?, discount_value = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+          "UPDATE products SET name = ?, price = ?, stock = ?, category = ?, image = ?, discount_type = ?, discount_value = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?"
         ).bind(
           data.name,
           data.price,
@@ -498,44 +528,57 @@ var worker_default = {
           data.image || null,
           data.discountType || null,
           data.discountValue || null,
-          id
+          id,
+          userId
         ).run();
         return Response.json({ id, ...data }, { headers: corsHeaders });
       }
       if (path.startsWith("/api/products/") && request.method === "DELETE") {
+        if (!userId) {
+          return Response.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
+        }
         const id = path.split("/").pop();
-        await env.DB.prepare("DELETE FROM products WHERE id = ?").bind(id).run();
+        await env.DB.prepare("DELETE FROM products WHERE id = ? AND user_id = ?").bind(id, userId).run();
         return Response.json({ success: true }, { headers: corsHeaders });
       }
       if (path === "/api/customers" && request.method === "GET") {
+        if (!userId) {
+          return Response.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
+        }
         const query = url.searchParams.get("q") || "";
-        let sql = "SELECT * FROM customers";
-        const params = [];
+        let sql = "SELECT * FROM customers WHERE user_id = ?";
+        const params = [userId];
         if (query) {
-          sql += " WHERE name LIKE ? OR phone LIKE ?";
+          sql += " AND (name LIKE ? OR phone LIKE ?)";
           params.push(`%${query}%`, `%${query}%`);
         }
         sql += " ORDER BY name";
         const stmt = env.DB.prepare(sql);
-        const boundStmt = params.length > 0 ? stmt.bind(...params) : stmt;
-        const { results } = await boundStmt.all();
+        const { results } = await stmt.bind(...params).all();
         return Response.json(results, { headers: corsHeaders });
       }
       if (path === "/api/customers" && request.method === "POST") {
+        if (!userId) {
+          return Response.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
+        }
         const data = await request.json();
         const id = Date.now().toString();
         await env.DB.prepare(
-          "INSERT INTO customers (id, name, phone) VALUES (?, ?, ?)"
-        ).bind(id, data.name, data.phone || null).run();
+          "INSERT INTO customers (id, user_id, name, phone) VALUES (?, ?, ?, ?)"
+        ).bind(id, userId, data.name, data.phone || null).run();
         return Response.json({ id, ...data }, { headers: corsHeaders });
       }
       if (path === "/api/transactions" && request.method === "GET") {
+        if (!userId) {
+          return Response.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
+        }
         const { results } = await env.DB.prepare(
           `SELECT t.*, c.name as customer_name, c.phone as customer_phone
            FROM transactions t
-           LEFT JOIN customers c ON t.customer_id = c.id
+           LEFT JOIN customers c ON t.customer_id = c.id AND c.user_id = t.user_id
+           WHERE t.user_id = ?
            ORDER BY t.date DESC`
-        ).all();
+        ).bind(userId).all();
         const transactions = await Promise.all(
           results.map(async (transaction) => {
             const { results: items } = await env.DB.prepare(
@@ -547,13 +590,17 @@ var worker_default = {
         return Response.json(transactions, { headers: corsHeaders });
       }
       if (path === "/api/transactions" && request.method === "POST") {
+        if (!userId) {
+          return Response.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
+        }
         const data = await request.json();
         const id = Date.now().toString();
         await env.DB.prepare(
-          `INSERT INTO transactions (id, customer_id, total, total_discount, amount_paid, change_amount, payment_method, date)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO transactions (id, user_id, customer_id, total, total_discount, amount_paid, change_amount, payment_method, date)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
           id,
+          userId,
           data.customerId || null,
           data.total,
           data.totalDiscount,
@@ -576,39 +623,107 @@ var worker_default = {
             item.discountValue || null
           ).run();
           await env.DB.prepare(
-            "UPDATE products SET stock = stock - ? WHERE id = ?"
-          ).bind(item.quantity, item.id).run();
+            "UPDATE products SET stock = stock - ? WHERE id = ? AND user_id = ?"
+          ).bind(item.quantity, item.id, userId).run();
         }
         const transaction = await env.DB.prepare(
           `SELECT t.*, c.name as customer_name, c.phone as customer_phone
            FROM transactions t
-           LEFT JOIN customers c ON t.customer_id = c.id
+           LEFT JOIN customers c ON t.customer_id = c.id AND c.user_id = t.user_id
            WHERE t.id = ?`
         ).bind(id).first();
         return Response.json(transaction, { headers: corsHeaders });
       }
       if (path === "/api/settings" && request.method === "GET") {
+        if (!userId) {
+          return Response.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
+        }
         const settings = await env.DB.prepare(
-          "SELECT * FROM store_settings WHERE id = 1"
-        ).first();
+          "SELECT * FROM store_settings WHERE user_id = ?"
+        ).bind(userId).first();
+        if (!settings) {
+          return Response.json({
+            store_name: "",
+            store_address: "",
+            store_phone: "",
+            theme_tone: "green",
+            background_image: null,
+            store_logo: null
+          }, { headers: corsHeaders });
+        }
         return Response.json(settings, { headers: corsHeaders });
       }
       if (path === "/api/settings" && request.method === "PUT") {
+        if (!userId) {
+          return Response.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
+        }
         const data = await request.json();
-        await env.DB.prepare(
-          `UPDATE store_settings
-           SET store_name = ?, store_address = ?, store_phone = ?, theme_tone = ?, background_image = ?, updated_at = CURRENT_TIMESTAMP
-           WHERE id = 1`
-        ).bind(
-          data.storeName,
-          data.storeAddress || null,
-          data.storePhone || null,
-          data.themeTone,
-          data.backgroundImage || null
-        ).run();
+        console.log("PUT /api/settings received:", JSON.stringify({
+          storeName: data.storeName,
+          store_address: data.store_address,
+          store_phone: data.store_phone,
+          themeTone: data.themeTone,
+          background_image: data.background_image?.substring(0, 30),
+          store_logo: data.store_logo?.substring(0, 30)
+        }));
+        const toNull = /* @__PURE__ */ __name((val) => val === void 0 ? null : val, "toNull");
+        const existing = await env.DB.prepare(
+          "SELECT id FROM store_settings WHERE user_id = ?"
+        ).bind(userId).first();
+        if (existing) {
+          const updateFields = [];
+          const updateValues = [];
+          if (data.storeName !== void 0) {
+            updateFields.push("store_name = ?");
+            updateValues.push(data.storeName);
+          }
+          if (data.store_address !== void 0) {
+            updateFields.push("store_address = ?");
+            updateValues.push(toNull(data.store_address));
+          }
+          if (data.store_phone !== void 0) {
+            updateFields.push("store_phone = ?");
+            updateValues.push(toNull(data.store_phone));
+          }
+          if (data.themeTone !== void 0) {
+            updateFields.push("theme_tone = ?");
+            updateValues.push(data.themeTone);
+          }
+          if (data.background_image !== void 0) {
+            updateFields.push("background_image = ?");
+            updateValues.push(toNull(data.background_image));
+          }
+          if (data.store_logo !== void 0) {
+            updateFields.push("store_logo = ?");
+            updateValues.push(toNull(data.store_logo));
+          }
+          if (updateFields.length === 0) {
+            return Response.json({ error: "No fields to update" }, { status: 400, headers: corsHeaders });
+          }
+          updateFields.push("updated_at = CURRENT_TIMESTAMP");
+          updateValues.push(userId);
+          console.log("UPDATE fields:", updateFields);
+          console.log("UPDATE values count:", updateValues.length);
+          await env.DB.prepare(
+            `UPDATE store_settings SET ${updateFields.join(", ")} WHERE user_id = ?`
+          ).bind(...updateValues).run();
+        } else {
+          await env.DB.prepare(
+            `INSERT INTO store_settings (user_id, store_name, store_address, store_phone, theme_tone, background_image, store_logo)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`
+          ).bind(
+            userId,
+            data.storeName,
+            toNull(data.storeAddress),
+            toNull(data.storePhone),
+            data.themeTone,
+            toNull(data.backgroundImage),
+            toNull(data.storeLogo)
+          ).run();
+        }
         const settings = await env.DB.prepare(
-          "SELECT * FROM store_settings WHERE id = 1"
-        ).first();
+          "SELECT * FROM store_settings WHERE user_id = ?"
+        ).bind(userId).first();
         return Response.json(settings, { headers: corsHeaders });
       }
       try {
@@ -668,7 +783,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-SualXW/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-W10oN8/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -700,7 +815,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-SualXW/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-W10oN8/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

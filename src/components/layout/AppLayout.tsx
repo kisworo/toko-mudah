@@ -32,6 +32,17 @@ export function AppLayout({ children, settings, onOpenSettings, isAuthenticated 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
+  // Get store name: from settings, or from user's business name (full_name)
+  const getStoreName = () => {
+    if (settings?.storeName) return settings.storeName;
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      return user.full_name || 'TokoKu';
+    }
+    return 'TokoKu';
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated");
     localStorage.removeItem("user");
@@ -54,10 +65,20 @@ export function AppLayout({ children, settings, onOpenSettings, isAuthenticated 
       <header className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur-sm shadow-sm">
         <div className="container flex h-14 items-center justify-between">
           <Link to={isAuthenticated ? "/cashier" : "/"} className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <Store className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-lg font-semibold">{settings?.storeName || 'TokoKu'}</span>
+            {settings?.storeLogo ? (
+              <div className="h-8 w-8 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                <img
+                  src={settings.storeLogo}
+                  alt="Logo toko"
+                  className="h-full w-full object-contain"
+                />
+              </div>
+            ) : (
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+                <Store className="h-5 w-5 text-primary-foreground" />
+              </div>
+            )}
+            <span className="text-lg font-semibold">{getStoreName()}</span>
           </Link>
 
           {/* Desktop Navigation */}

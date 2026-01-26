@@ -10,6 +10,7 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Cache-Control': 'no-store, no-cache, must-revalidate, private',
 };
 
 // Middleware to verify JWT token
@@ -23,6 +24,12 @@ async function authenticateUser(request: Request): Promise<{ userId: string; use
 
   const payload = await verifyToken(token);
   return payload ? { userId: payload.userId, username: payload.username } : null;
+}
+
+// Helper function to verify authentication and return user ID
+async function requireAuth(request: Request): Promise<string | null> {
+  const authUser = await authenticateUser(request);
+  return authUser ? authUser.userId : null;
 }
 
 export default {
@@ -41,24 +48,24 @@ export default {
       // Register endpoint
       if (path === '/api/auth/register' && request.method === 'POST') {
         const data = await request.json() as any;
-        const { username, email, password, fullName } = data;
+        const { email, password, businessName } = data;
 
         // Validate input
-        if (!username || !email || !password) {
+        if (!email || !password) {
           return Response.json(
-            { error: 'Username, email, and password are required' },
+            { error: 'Email and password are required' },
             { status: 400, headers: corsHeaders }
           );
         }
 
-        // Check if username already exists
+        // Check if email already exists
         const existingUser = await env.DB.prepare(
-          'SELECT id FROM users WHERE username = ? OR email = ?'
-        ).bind(username, email).first();
+          'SELECT id FROM users WHERE email = ?'
+        ).bind(email).first();
 
         if (existingUser) {
           return Response.json(
-            { error: 'Username or email already exists' },
+            { error: 'Email already exists' },
             { status: 409, headers: corsHeaders }
           );
         }
@@ -66,19 +73,20 @@ export default {
         // Hash password and create user
         const passwordHash = await hashPassword(password);
         const id = crypto.randomUUID();
+        const username = email.split('@')[0]; // Generate username from email for compatibility
         const timestamp = new Date().toISOString();
 
         await env.DB.prepare(
           'INSERT INTO users (id, username, email, password_hash, full_name, is_demo, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-        ).bind(id, username, email, passwordHash, fullName || null, 0, timestamp, timestamp).run();
+        ).bind(id, username, email, passwordHash, businessName || null, 0, timestamp, timestamp).run();
 
         // Generate token
-        const user = { id, username, email, full_name: fullName, is_demo: 0 };
+        const user = { id, username, email, full_name: businessName, is_demo: 0 };
         const token = await generateToken(user);
 
         return Response.json(
           {
-            user: { id, username, email, full_name: fullName },
+            user: { id, username, email, full_name: businessName },
             token,
           },
           { headers: corsHeaders }
@@ -88,24 +96,24 @@ export default {
       // Login endpoint
       if (path === '/api/auth/login' && request.method === 'POST') {
         const data = await request.json() as any;
-        const { username, password } = data;
+        const { email, password } = data;
 
         // Validate input
-        if (!username || !password) {
+        if (!email || !password) {
           return Response.json(
-            { error: 'Username and password are required' },
+            { error: 'Email and password are required' },
             { status: 400, headers: corsHeaders }
           );
         }
 
-        // Find user by username or email
+        // Find user by email
         const user = await env.DB.prepare(
-          'SELECT * FROM users WHERE username = ? OR email = ?'
-        ).bind(username, username).first() as any;
+          'SELECT * FROM users WHERE email = ?'
+        ).bind(email).first() as any;
 
         if (!user) {
           return Response.json(
-            { error: 'Invalid username or password' },
+            { error: 'Invalid email or password' },
             { status: 401, headers: corsHeaders }
           );
         }
@@ -114,7 +122,7 @@ export default {
         const isValid = await verifyPassword(password, user.password_hash);
         if (!isValid) {
           return Response.json(
-            { error: 'Invalid username or password' },
+            { error: 'Invalid email or password' },
             { status: 401, headers: corsHeaders }
           );
         }
@@ -160,53 +168,79 @@ export default {
 
         return Response.json(user, { headers: corsHeaders });
       }
+
+      // ===== PROTECTED ENDPOINTS (requires auth) =====
+
+      // Get user ID for all subsequent requests
+      const userId = await requireAuth(request);
+
       // Categories API
       if (path === '/api/categories' && request.method === 'GET') {
+        if (!userId) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+        }
         const { results } = await env.DB.prepare(
-          'SELECT * FROM categories ORDER BY name'
-        ).all();
+          'SELECT * FROM categories WHERE user_id = ? ORDER BY name'
+        ).bind(userId).all();
         return Response.json(results, { headers: corsHeaders });
       }
 
       if (path === '/api/categories' && request.method === 'POST') {
+        if (!userId) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+        }
         const data = await request.json() as any;
         const id = Date.now().toString();
         await env.DB.prepare(
-          'INSERT INTO categories (id, name, color) VALUES (?, ?, ?)'
-        ).bind(id, data.name, data.color || null).run();
+          'INSERT INTO categories (id, user_id, name, color) VALUES (?, ?, ?, ?)'
+        ).bind(id, userId, data.name, data.color || null).run();
         return Response.json({ id, ...data }, { headers: corsHeaders });
       }
 
       if (path.startsWith('/api/categories/') && request.method === 'PUT') {
+        if (!userId) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+        }
         const id = path.split('/').pop();
         const data = await request.json() as any;
+        // Also check ownership
         await env.DB.prepare(
-          'UPDATE categories SET name = ?, color = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-        ).bind(data.name, data.color || null, id).run();
+          'UPDATE categories SET name = ?, color = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?'
+        ).bind(data.name, data.color || null, id, userId).run();
         return Response.json({ id, ...data }, { headers: corsHeaders });
       }
 
       if (path.startsWith('/api/categories/') && request.method === 'DELETE') {
+        if (!userId) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+        }
         const id = path.split('/').pop();
-        await env.DB.prepare('DELETE FROM categories WHERE id = ?').bind(id).run();
+        await env.DB.prepare('DELETE FROM categories WHERE id = ? AND user_id = ?').bind(id, userId).run();
         return Response.json({ success: true }, { headers: corsHeaders });
       }
 
       // Products API
       if (path === '/api/products' && request.method === 'GET') {
+        if (!userId) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+        }
         const { results } = await env.DB.prepare(
-          'SELECT * FROM products ORDER BY name'
-        ).all();
+          'SELECT * FROM products WHERE user_id = ? ORDER BY name'
+        ).bind(userId).all();
         return Response.json(results, { headers: corsHeaders });
       }
 
       if (path === '/api/products' && request.method === 'POST') {
+        if (!userId) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+        }
         const data = await request.json() as any;
         const id = Date.now().toString();
         await env.DB.prepare(
-          'INSERT INTO products (id, name, price, stock, category, image, discount_type, discount_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+          'INSERT INTO products (id, user_id, name, price, stock, category, image, discount_type, discount_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
         ).bind(
           id,
+          userId,
           data.name,
           data.price,
           data.stock,
@@ -219,10 +253,13 @@ export default {
       }
 
       if (path.startsWith('/api/products/') && request.method === 'PUT') {
+        if (!userId) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+        }
         const id = path.split('/').pop();
         const data = await request.json() as any;
         await env.DB.prepare(
-          'UPDATE products SET name = ?, price = ?, stock = ?, category = ?, image = ?, discount_type = ?, discount_value = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+          'UPDATE products SET name = ?, price = ?, stock = ?, category = ?, image = ?, discount_type = ?, discount_value = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?'
         ).bind(
           data.name,
           data.price,
@@ -231,53 +268,66 @@ export default {
           data.image || null,
           data.discountType || null,
           data.discountValue || null,
-          id
+          id,
+          userId
         ).run();
         return Response.json({ id, ...data }, { headers: corsHeaders });
       }
 
       if (path.startsWith('/api/products/') && request.method === 'DELETE') {
+        if (!userId) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+        }
         const id = path.split('/').pop();
-        await env.DB.prepare('DELETE FROM products WHERE id = ?').bind(id).run();
+        await env.DB.prepare('DELETE FROM products WHERE id = ? AND user_id = ?').bind(id, userId).run();
         return Response.json({ success: true }, { headers: corsHeaders });
       }
 
       // Customers API
       if (path === '/api/customers' && request.method === 'GET') {
+        if (!userId) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+        }
         const query = url.searchParams.get('q') || '';
-        let sql = 'SELECT * FROM customers';
-        const params: any[] = [];
+        let sql = 'SELECT * FROM customers WHERE user_id = ?';
+        const params: any[] = [userId];
 
         if (query) {
-          sql += ' WHERE name LIKE ? OR phone LIKE ?';
+          sql += ' AND (name LIKE ? OR phone LIKE ?)';
           params.push(`%${query}%`, `%${query}%`);
         }
 
         sql += ' ORDER BY name';
 
         const stmt = env.DB.prepare(sql);
-        const boundStmt = params.length > 0 ? stmt.bind(...params) : stmt;
-        const { results } = await boundStmt.all();
+        const { results } = await stmt.bind(...params).all();
         return Response.json(results, { headers: corsHeaders });
       }
 
       if (path === '/api/customers' && request.method === 'POST') {
+        if (!userId) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+        }
         const data = await request.json() as any;
         const id = Date.now().toString();
         await env.DB.prepare(
-          'INSERT INTO customers (id, name, phone) VALUES (?, ?, ?)'
-        ).bind(id, data.name, data.phone || null).run();
+          'INSERT INTO customers (id, user_id, name, phone) VALUES (?, ?, ?, ?)'
+        ).bind(id, userId, data.name, data.phone || null).run();
         return Response.json({ id, ...data }, { headers: corsHeaders });
       }
 
       // Transactions API
       if (path === '/api/transactions' && request.method === 'GET') {
+        if (!userId) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+        }
         const { results } = await env.DB.prepare(
           `SELECT t.*, c.name as customer_name, c.phone as customer_phone
            FROM transactions t
-           LEFT JOIN customers c ON t.customer_id = c.id
+           LEFT JOIN customers c ON t.customer_id = c.id AND c.user_id = t.user_id
+           WHERE t.user_id = ?
            ORDER BY t.date DESC`
-        ).all();
+        ).bind(userId).all();
 
         // Get items for each transaction
         const transactions = await Promise.all(
@@ -293,15 +343,19 @@ export default {
       }
 
       if (path === '/api/transactions' && request.method === 'POST') {
+        if (!userId) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+        }
         const data = await request.json() as any;
         const id = Date.now().toString();
 
         // Start transaction
         await env.DB.prepare(
-          `INSERT INTO transactions (id, customer_id, total, total_discount, amount_paid, change_amount, payment_method, date)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO transactions (id, user_id, customer_id, total, total_discount, amount_paid, change_amount, payment_method, date)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
           id,
+          userId,
           data.customerId || null,
           data.total,
           data.totalDiscount,
@@ -326,47 +380,132 @@ export default {
             item.discountValue || null
           ).run();
 
-          // Update product stock
+          // Update product stock (only for this user's products)
           await env.DB.prepare(
-            'UPDATE products SET stock = stock - ? WHERE id = ?'
-          ).bind(item.quantity, item.id).run();
+            'UPDATE products SET stock = stock - ? WHERE id = ? AND user_id = ?'
+          ).bind(item.quantity, item.id, userId).run();
         }
 
         const transaction = await env.DB.prepare(
           `SELECT t.*, c.name as customer_name, c.phone as customer_phone
            FROM transactions t
-           LEFT JOIN customers c ON t.customer_id = c.id
+           LEFT JOIN customers c ON t.customer_id = c.id AND c.user_id = t.user_id
            WHERE t.id = ?`
         ).bind(id).first();
 
         return Response.json(transaction, { headers: corsHeaders });
       }
 
-      // Settings API
+      // Settings API (per user)
       if (path === '/api/settings' && request.method === 'GET') {
+        if (!userId) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+        }
         const settings = await env.DB.prepare(
-          'SELECT * FROM store_settings WHERE id = 1'
-        ).first();
+          'SELECT * FROM store_settings WHERE user_id = ?'
+        ).bind(userId).first();
+
+        // Return default settings if none exist
+        if (!settings) {
+          return Response.json({
+            store_name: '',
+            store_address: '',
+            store_phone: '',
+            theme_tone: 'green',
+            background_image: null,
+            store_logo: null,
+          }, { headers: corsHeaders });
+        }
+
         return Response.json(settings, { headers: corsHeaders });
       }
 
       if (path === '/api/settings' && request.method === 'PUT') {
+        if (!userId) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+        }
         const data = await request.json() as any;
-        await env.DB.prepare(
-          `UPDATE store_settings
-           SET store_name = ?, store_address = ?, store_phone = ?, theme_tone = ?, background_image = ?, updated_at = CURRENT_TIMESTAMP
-           WHERE id = 1`
-        ).bind(
-          data.storeName,
-          data.storeAddress || null,
-          data.storePhone || null,
-          data.themeTone,
-          data.backgroundImage || null
-        ).run();
+
+        // Debug log
+        console.log('PUT /api/settings received:', JSON.stringify({
+          storeName: data.storeName,
+          store_address: data.store_address,
+          store_phone: data.store_phone,
+          themeTone: data.themeTone,
+          background_image: data.background_image?.substring(0, 30),
+          store_logo: data.store_logo?.substring(0, 30),
+        }));
+
+        // Helper to convert undefined to null
+        const toNull = (val: any) => val === undefined ? null : val;
+
+        // Check if settings exist for this user
+        const existing = await env.DB.prepare(
+          'SELECT id FROM store_settings WHERE user_id = ?'
+        ).bind(userId).first();
+
+        if (existing) {
+          // Build dynamic UPDATE query - only update fields that are provided
+          const updateFields: string[] = [];
+          const updateValues: any[] = [];
+
+          if (data.storeName !== undefined) {
+            updateFields.push('store_name = ?');
+            updateValues.push(data.storeName);
+          }
+          if (data.store_address !== undefined) {
+            updateFields.push('store_address = ?');
+            updateValues.push(toNull(data.store_address));
+          }
+          if (data.store_phone !== undefined) {
+            updateFields.push('store_phone = ?');
+            updateValues.push(toNull(data.store_phone));
+          }
+          if (data.themeTone !== undefined) {
+            updateFields.push('theme_tone = ?');
+            updateValues.push(data.themeTone);
+          }
+          if (data.background_image !== undefined) {
+            updateFields.push('background_image = ?');
+            updateValues.push(toNull(data.background_image));
+          }
+          if (data.store_logo !== undefined) {
+            updateFields.push('store_logo = ?');
+            updateValues.push(toNull(data.store_logo));
+          }
+
+          if (updateFields.length === 0) {
+            return Response.json({ error: 'No fields to update' }, { status: 400, headers: corsHeaders });
+          }
+
+          updateFields.push('updated_at = CURRENT_TIMESTAMP');
+          updateValues.push(userId);
+
+          console.log('UPDATE fields:', updateFields);
+          console.log('UPDATE values count:', updateValues.length);
+
+          await env.DB.prepare(
+            `UPDATE store_settings SET ${updateFields.join(', ')} WHERE user_id = ?`
+          ).bind(...updateValues).run();
+        } else {
+          // Insert new settings for this user
+          await env.DB.prepare(
+            `INSERT INTO store_settings (user_id, store_name, store_address, store_phone, theme_tone, background_image, store_logo)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`
+          ).bind(
+            userId,
+            data.storeName,
+            toNull(data.storeAddress),
+            toNull(data.storePhone),
+            data.themeTone,
+            toNull(data.backgroundImage),
+            toNull(data.storeLogo)
+          ).run();
+        }
 
         const settings = await env.DB.prepare(
-          'SELECT * FROM store_settings WHERE id = 1'
-        ).first();
+          'SELECT * FROM store_settings WHERE user_id = ?'
+        ).bind(userId).first();
 
         return Response.json(settings, { headers: corsHeaders });
       }

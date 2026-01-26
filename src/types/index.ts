@@ -59,4 +59,5 @@ export interface StoreSettings {
   storePhone?: string;
   themeTone: ThemeTone;
   backgroundImage?: string;
+  storeLogo?: string;
 }

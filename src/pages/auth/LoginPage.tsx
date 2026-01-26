@@ -8,7 +8,7 @@ import { Store } from "lucide-react";
 import { api } from "@/lib/api";
 
 export function LoginPage() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -19,7 +19,12 @@ export function LoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await api.login(username, password);
+      // Clear old token before login
+      api.clearToken();
+      localStorage.removeItem("user");
+      localStorage.removeItem("isAuthenticated");
+
+      const response = await api.login(email, password);
       // Store the token
       api.setToken(response.token);
       // Store user info
@@ -28,7 +33,7 @@ export function LoginPage() {
       // Redirect to cashier
       window.location.href = "/cashier";
     } catch (err: any) {
-      setError(err.message || "Username atau password salah. Gunakan akun demo di halaman depan.");
+      setError(err.message || "Email atau password salah. Gunakan akun demo di halaman depan.");
     } finally {
       setIsLoading(false);
     }
@@ -43,7 +48,7 @@ export function LoginPage() {
           </div>
           <CardTitle className="text-2xl">Masuk</CardTitle>
           <CardDescription>
-            Masukkan username dan password untuk masuk ke aplikasi
+            Masukkan email dan password untuk masuk ke aplikasi
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleLogin}>
@@ -54,13 +59,13 @@ export function LoginPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="username"
-                type="text"
-                placeholder="Masukkan username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                id="email"
+                type="email"
+                placeholder="nama@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={isLoading}
               />

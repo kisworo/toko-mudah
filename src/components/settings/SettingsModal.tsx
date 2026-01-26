@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Store, Palette, ImageIcon, Upload, Trash2, Camera } from 'lucide-react';
+import { Store, Palette, ImageIcon, Upload, Trash2, Camera, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface SettingsModalProps {
@@ -90,6 +90,49 @@ export function SettingsModal({ open, onClose, settings, onUpdateSettings }: Set
     onUpdateSettings({ backgroundImage: undefined });
   };
 
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        // Resize logo to max 256x256 for performance
+        const canvas = document.createElement('canvas');
+        const maxSize = 256;
+        let { width, height } = img;
+
+        if (width > maxSize || height > maxSize) {
+          if (width > height) {
+            height = (height / width) * maxSize;
+            width = maxSize;
+          } else {
+            width = (width / height) * maxSize;
+            height = maxSize;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        const resizedImage = canvas.toDataURL('image/png', 0.9);
+        onUpdateSettings({ storeLogo: resizedImage });
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+
+    // Reset input
+    e.target.value = '';
+  };
+
+  const handleRemoveLogo = () => {
+    onUpdateSettings({ storeLogo: undefined });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-lg">
@@ -118,6 +161,54 @@ export function SettingsModal({ open, onClose, settings, onUpdateSettings }: Set
 
           {/* Store Info Tab */}
           <TabsContent value="store" className="space-y-4 mt-4">
+            {/* Logo Upload */}
+            <div className="space-y-2">
+              <Label>Logo Toko (Opsional)</Label>
+              {settings.storeLogo ? (
+                <div className="flex items-center gap-4 p-3 border rounded-lg">
+                  <div className="h-16 w-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                    <img
+                      src={settings.storeLogo}
+                      alt="Logo toko"
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Logo telah ditambahkan</p>
+                    <p className="text-xs text-muted-foreground">Logo akan ditampilkan di header</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleRemoveLogo}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div
+                  className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-accent/50 transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    Klik untuk upload logo
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    PNG, JPG hingga 256x256px
+                  </p>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleLogoUpload}
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="store-name">Nama Toko</Label>
               <Input
