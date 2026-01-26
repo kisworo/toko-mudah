@@ -13,9 +13,9 @@ interface CartPanelProps {
   onUpdateQuantity: (id: string, quantity: number) => void;
   onRemove: (id: string) => void;
   onClearCart: () => void;
-  onCheckout: (customer?: Customer, paymentMethod?: 'cash' | 'transfer', amountPaid?: number) => void;
-  onFindCustomers: (query: string) => Customer[];
-  onAddCustomer: (customer: Omit<Customer, 'id'>) => Customer;
+  onCheckout: (customer?: Customer, paymentMethod?: 'cash' | 'transfer', amountPaid?: number) => Promise<void> | void;
+  onFindCustomers: (query: string) => Promise<Customer[]> | Customer[];
+  onAddCustomer: (customer: Omit<Customer, 'id'>) => Promise<Customer> | Customer;
   total: number;
   totalDiscount: number;
 }
@@ -53,12 +53,31 @@ export function CartPanel({
 
   // Search customers
   useEffect(() => {
-    if (customerSearch.trim()) {
-      const results = onFindCustomers(customerSearch);
-      setSearchResults(results);
-    } else {
-      setSearchResults([]);
-    }
+    let active = true;
+
+    const performSearch = async () => {
+      if (customerSearch.trim()) {
+        try {
+          const results = await onFindCustomers(customerSearch);
+          if (active) {
+            setSearchResults(results);
+          }
+        } catch (error) {
+          console.error("Error finding customers:", error);
+          if (active) setSearchResults([]);
+        }
+      } else {
+        if (active) {
+          setSearchResults([]);
+        }
+      }
+    };
+
+    performSearch();
+
+    return () => {
+      active = false;
+    };
   }, [customerSearch, onFindCustomers]);
 
   // Click outside to close search results
@@ -83,18 +102,22 @@ export function CartPanel({
     setCustomerSearch('');
   };
 
-  const handleAddNewCustomer = () => {
+  const handleAddNewCustomer = async () => {
     if (!newCustomerName.trim()) return;
     
-    const newCustomer = onAddCustomer({
-      name: newCustomerName.trim(),
-      phone: newCustomerPhone.trim() || undefined,
-    });
-    
-    setSelectedCustomer(newCustomer);
-    setNewCustomerName('');
-    setNewCustomerPhone('');
-    setShowNewCustomerForm(false);
+    try {
+      const newCustomer = await onAddCustomer({
+        name: newCustomerName.trim(),
+        phone: newCustomerPhone.trim() || undefined,
+      });
+      
+      setSelectedCustomer(newCustomer);
+      setNewCustomerName('');
+      setNewCustomerPhone('');
+      setShowNewCustomerForm(false);
+    } catch (error) {
+      console.error("Error adding customer:", error);
+    }
   };
 
   const handleProceedToPayment = () => {
@@ -102,16 +125,20 @@ export function CartPanel({
     setAmountPaid(total.toString());
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     const paid = parseInt(amountPaid) || total;
-    onCheckout(selectedCustomer || undefined, paymentMethod, paid);
-    
-    // Reset state
-    setSelectedCustomer(null);
-    setCustomerSearch('');
-    setAmountPaid('');
-    setShowPayment(false);
-    setPaymentMethod('cash');
+    try {
+      await onCheckout(selectedCustomer || undefined, paymentMethod, paid);
+      
+      // Reset state
+      setSelectedCustomer(null);
+      setCustomerSearch('');
+      setAmountPaid('');
+      setShowPayment(false);
+      setPaymentMethod('cash');
+    } catch (error) {
+      console.error("Error during checkout:", error);
+    }
   };
 
   const change = (parseInt(amountPaid) || 0) - total;

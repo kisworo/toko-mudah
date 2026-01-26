@@ -7,7 +7,7 @@ import { Plus, X, Tag } from 'lucide-react';
 
 interface CategoryManagerProps {
   categories: Category[];
-  onAdd: (category: Omit<Category, 'id'>) => void;
+  onAdd: (category: Omit<Category, 'id'>) => Promise<Category> | void;
   onDelete: (id: string) => void;
 }
 
@@ -26,7 +26,7 @@ export function CategoryManager({ categories, onAdd, onDelete }: CategoryManager
   const [newCategory, setNewCategory] = useState('');
   const [selectedColor, setSelectedColor] = useState(colorOptions[0]);
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!newCategory.trim()) return;
     
     // Check if category already exists
@@ -34,9 +34,13 @@ export function CategoryManager({ categories, onAdd, onDelete }: CategoryManager
       return;
     }
 
-    onAdd({ name: newCategory.trim(), color: selectedColor });
-    setNewCategory('');
-    setSelectedColor(colorOptions[Math.floor(Math.random() * colorOptions.length)]);
+    try {
+      await onAdd({ name: newCategory.trim(), color: selectedColor });
+      setNewCategory('');
+      setSelectedColor(colorOptions[Math.floor(Math.random() * colorOptions.length)]);
+    } catch (error) {
+      console.error("Failed to add category:", error);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

@@ -30,7 +30,7 @@ export default {
       }
 
       if (path === '/api/categories' && request.method === 'POST') {
-        const data = await request.json();
+        const data = await request.json() as any;
         const id = Date.now().toString();
         await env.DB.prepare(
           'INSERT INTO categories (id, name, color) VALUES (?, ?, ?)'
@@ -40,7 +40,7 @@ export default {
 
       if (path.startsWith('/api/categories/') && request.method === 'PUT') {
         const id = path.split('/').pop();
-        const data = await request.json();
+        const data = await request.json() as any;
         await env.DB.prepare(
           'UPDATE categories SET name = ?, color = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
         ).bind(data.name, data.color || null, id).run();
@@ -62,7 +62,7 @@ export default {
       }
 
       if (path === '/api/products' && request.method === 'POST') {
-        const data = await request.json();
+        const data = await request.json() as any;
         const id = Date.now().toString();
         await env.DB.prepare(
           'INSERT INTO products (id, name, price, stock, category, image, discount_type, discount_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
@@ -81,7 +81,7 @@ export default {
 
       if (path.startsWith('/api/products/') && request.method === 'PUT') {
         const id = path.split('/').pop();
-        const data = await request.json();
+        const data = await request.json() as any;
         await env.DB.prepare(
           'UPDATE products SET name = ?, price = ?, stock = ?, category = ?, image = ?, discount_type = ?, discount_value = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
         ).bind(
@@ -123,7 +123,7 @@ export default {
       }
 
       if (path === '/api/customers' && request.method === 'POST') {
-        const data = await request.json();
+        const data = await request.json() as any;
         const id = Date.now().toString();
         await env.DB.prepare(
           'INSERT INTO customers (id, name, phone) VALUES (?, ?, ?)'
@@ -154,7 +154,7 @@ export default {
       }
 
       if (path === '/api/transactions' && request.method === 'POST') {
-        const data = await request.json();
+        const data = await request.json() as any;
         const id = Date.now().toString();
 
         // Start transaction
@@ -212,7 +212,7 @@ export default {
       }
 
       if (path === '/api/settings' && request.method === 'PUT') {
-        const data = await request.json();
+        const data = await request.json() as any;
         await env.DB.prepare(
           `UPDATE store_settings
            SET store_name = ?, store_address = ?, store_phone = ?, theme_tone = ?, background_image = ?, updated_at = CURRENT_TIMESTAMP

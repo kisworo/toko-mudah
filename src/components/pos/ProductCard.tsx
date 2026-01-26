@@ -73,25 +73,23 @@ export function ProductCard({ product, onAdd, compact = false }: ProductCardProp
         )}
         
         {/* Product Info */}
-        <div className="flex-1 min-w-0">
-          <h3 className="font-bold truncate text-lg">
+        <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
+          <h3 className="font-bold truncate text-lg leading-tight">
             {product.name}
           </h3>
-          <p className="text-sm text-muted-foreground mb-1">{product.category}</p>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-primary text-xl">
-                {formatPrice(discountedPrice)}
-              </span>
-              {hasDiscount && (
-                <span className="text-sm text-muted-foreground line-through">
-                  {formatPrice(product.price)}
-                </span>
-              )}
-            </div>
-            <span className="text-sm text-muted-foreground">
-              Stok: {product.stock}
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <span className="truncate">{product.category}</span>
+            <span className="shrink-0">Stok: {product.stock}</span>
+          </div>
+          <div className="flex items-center flex-wrap gap-x-2 gap-y-0">
+            <span className="font-bold text-primary text-xl">
+              {formatPrice(discountedPrice)}
             </span>
+            {hasDiscount && (
+              <span className="text-sm text-muted-foreground line-through">
+                {formatPrice(product.price)}
+              </span>
+            )}
           </div>
         </div>
 

@@ -18,7 +18,7 @@ interface ProductFormProps {
   categories: Category[];
   open: boolean;
   onClose: () => void;
-  onSubmit: (product: Omit<Product, 'id'>) => void;
+  onSubmit: (product: Omit<Product, 'id'>) => Promise<void> | void;
 }
 
 export function ProductForm({ product, categories, open, onClose, onSubmit }: ProductFormProps) {
@@ -43,22 +43,26 @@ export function ProductForm({ product, categories, open, onClose, onSubmit }: Pr
     }
   }, [open, product, categories]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!name.trim() || !price || !stock || !category) return;
 
-    onSubmit({
-      name: name.trim(),
-      price: parseInt(price),
-      stock: parseInt(stock),
-      category,
-      image,
-      discountType: discountType || undefined,
-      discountValue: discountValue ? parseInt(discountValue) : undefined,
-    });
+    try {
+      await onSubmit({
+        name: name.trim(),
+        price: parseInt(price),
+        stock: parseInt(stock),
+        category,
+        image,
+        discountType: discountType || undefined,
+        discountValue: discountValue ? parseInt(discountValue) : undefined,
+      });
 
-    onClose();
+      onClose();
+    } catch (error) {
+      console.error("Error submitting product:", error);
+    }
   };
 
   const formatPrice = (value: string) => {

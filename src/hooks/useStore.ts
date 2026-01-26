@@ -1,92 +1,191 @@
-import { useState, useCallback } from 'react';
-import { Product, CartItem, Transaction, Customer, Category, getDiscountedPrice, getDiscountAmount } from '@/types';
+import { useState, useCallback, useEffect } from 'react';
+import { api } from '@/lib/api';
+import { Product, Category, Customer, CartItem, Transaction, getDiscountedPrice, getDiscountAmount } from '@/types';
 
-// Demo categories
-const initialCategories: Category[] = [
-  { id: '1', name: 'Makanan', color: '#22c55e' },
-  { id: '2', name: 'Minuman', color: '#3b82f6' },
-  { id: '3', name: 'Snack', color: '#f59e0b' },
-  { id: '4', name: 'Lainnya', color: '#6b7280' },
-];
+// Convert API Product to local Product format
+const convertApiProduct = (p: any): Product => ({
+  id: p.id,
+  name: p.name,
+  price: p.price,
+  stock: p.stock,
+  category: p.category,
+  image: p.image,
+  discountType: p.discount_type,
+  discountValue: p.discount_value,
+});
 
-// Demo products
-const initialProducts: Product[] = [
-  { id: '1', name: 'Kopi Hitam', price: 5000, stock: 100, category: 'Minuman' },
-  { id: '2', name: 'Kopi Susu', price: 8000, stock: 50, category: 'Minuman', discountType: 'percentage', discountValue: 10 },
-  { id: '3', name: 'Es Teh Manis', price: 4000, stock: 80, category: 'Minuman' },
-  { id: '4', name: 'Nasi Goreng', price: 15000, stock: 30, category: 'Makanan', discountType: 'fixed', discountValue: 2000 },
-  { id: '5', name: 'Mie Goreng', price: 12000, stock: 25, category: 'Makanan' },
-  { id: '6', name: 'Roti Bakar', price: 10000, stock: 20, category: 'Makanan' },
-  { id: '7', name: 'Gorengan', price: 2000, stock: 50, category: 'Snack' },
-  { id: '8', name: 'Keripik', price: 5000, stock: 40, category: 'Snack', discountType: 'percentage', discountValue: 20 },
-];
+// Convert API Category to local Category format
+const convertApiCategory = (c: any): Category => ({
+  id: c.id,
+  name: c.name,
+  color: c.color,
+});
 
-// Demo customers
-const initialCustomers: Customer[] = [
-  { id: '1', name: 'Budi Santoso', phone: '081234567890' },
-  { id: '2', name: 'Siti Rahayu', phone: '082345678901' },
-  { id: '3', name: 'Ahmad Wijaya', phone: '083456789012' },
-];
+// Convert API Customer to local Customer format
+const convertApiCustomer = (c: any): Customer => ({
+  id: c.id,
+  name: c.name,
+  phone: c.phone,
+});
+
+// Convert API Transaction to local Transaction format
+const convertApiTransaction = (t: any): Transaction => ({
+  id: t.id,
+  items: t.items.map((item: any) => ({
+    id: item.product_id || item.id, // Fallback for safety
+    name: item.product_name || item.name,
+    price: item.price,
+    quantity: item.quantity,
+    stock: 0, // Transaction items don't track stock explicitly
+    category: '', // Not needed for history
+    discountType: item.discount_type,
+    discountValue: item.discount_value,
+  })),
+  customer: t.customer_id ? {
+    id: t.customer_id,
+    name: t.customer_name || 'Unknown',
+    phone: t.customer_phone,
+  } : undefined,
+  total: t.total,
+  totalDiscount: t.total_discount,
+  amountPaid: t.amount_paid,
+  change: t.change_amount,
+  date: new Date(t.date),
+  paymentMethod: t.payment_method,
+});
 
 export function useStore() {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [categories, setCategories] = useState<Category[]>(initialCategories);
-  const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch initial data
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [productsData, categoriesData, customersData, transactionsData] = await Promise.all([
+          api.getProducts(),
+          api.getCategories(),
+          api.getCustomers(),
+          api.getTransactions(),
+        ]);
+
+        setProducts(productsData.map(convertApiProduct));
+        setCategories(categoriesData.map(convertApiCategory));
+        setCustomers(customersData.map(convertApiCustomer));
+        setTransactions(transactionsData.map(convertApiTransaction));
+      } catch (error: any) {
+        console.error('Error fetching data:', error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Category management
-  const addCategory = useCallback((category: Omit<Category, 'id'>) => {
-    const newCategory: Category = {
-      ...category,
-      id: Date.now().toString(),
-    };
-    setCategories(prev => [...prev, newCategory]);
-    return newCategory;
+  const addCategory = useCallback(async (category: Omit<Category, 'id'>) => {
+    try {
+      const result = await api.createCategory(category);
+      const newCategory = convertApiCategory(result);
+      setCategories(prev => [...prev, newCategory]);
+      return newCategory;
+    } catch (error: any) {
+      console.error('Error adding category:', error.message);
+      throw error;
+    }
   }, []);
 
-  const updateCategory = useCallback((id: string, updates: Partial<Category>) => {
-    setCategories(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+  const updateCategory = useCallback(async (id: string, updates: Partial<Category>) => {
+    try {
+      const result = await api.updateCategory(id, updates);
+      setCategories(prev => prev.map(c => c.id === id ? convertApiCategory(result) : c));
+    } catch (error: any) {
+      console.error('Error updating category:', error.message);
+      throw error;
+    }
   }, []);
 
-  const deleteCategory = useCallback((id: string) => {
-    setCategories(prev => prev.filter(c => c.id !== id));
+  const deleteCategory = useCallback(async (id: string) => {
+    try {
+      await api.deleteCategory(id);
+      setCategories(prev => prev.filter(c => c.id !== id));
+    } catch (error: any) {
+      console.error('Error deleting category:', error.message);
+      throw error;
+    }
   }, []);
 
-  const addProduct = useCallback((product: Omit<Product, 'id'>) => {
-    const newProduct: Product = {
-      ...product,
-      id: Date.now().toString(),
-    };
-    setProducts(prev => [...prev, newProduct]);
+  // Product management
+  const addProduct = useCallback(async (product: Omit<Product, 'id'>) => {
+    try {
+      const apiProduct = {
+        ...product,
+        discount_type: product.discountType,
+        discount_value: product.discountValue,
+      };
+      const result = await api.createProduct(apiProduct);
+      setProducts(prev => [...prev, convertApiProduct(result)]);
+    } catch (error: any) {
+      console.error('Error adding product:', error.message);
+      throw error;
+    }
   }, []);
 
-  const updateProduct = useCallback((id: string, updates: Partial<Product>) => {
-    setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+  const updateProduct = useCallback(async (id: string, updates: Partial<Product>) => {
+    try {
+      const apiProduct = {
+        ...updates,
+        discount_type: updates.discountType,
+        discount_value: updates.discountValue,
+      };
+      const result = await api.updateProduct(id, apiProduct);
+      setProducts(prev => prev.map(p => p.id === id ? convertApiProduct(result) : p));
+    } catch (error: any) {
+      console.error('Error updating product:', error.message);
+      throw error;
+    }
   }, []);
 
-  const deleteProduct = useCallback((id: string) => {
-    setProducts(prev => prev.filter(p => p.id !== id));
+  const deleteProduct = useCallback(async (id: string) => {
+    try {
+      await api.deleteProduct(id);
+      setProducts(prev => prev.filter(p => p.id !== id));
+    } catch (error: any) {
+      console.error('Error deleting product:', error.message);
+      throw error;
+    }
   }, []);
 
-  const addCustomer = useCallback((customer: Omit<Customer, 'id'>) => {
-    const newCustomer: Customer = {
-      ...customer,
-      id: Date.now().toString(),
-    };
-    setCustomers(prev => [...prev, newCustomer]);
-    return newCustomer;
+  // Customer management
+  const addCustomer = useCallback(async (customer: Omit<Customer, 'id'>) => {
+    try {
+      const result = await api.createCustomer(customer);
+      const newCustomer = convertApiCustomer(result);
+      setCustomers(prev => [...prev, newCustomer]);
+      return newCustomer;
+    } catch (error: any) {
+      console.error('Error adding customer:', error.message);
+      throw error;
+    }
   }, []);
 
-  const findCustomers = useCallback((query: string) => {
-    if (!query.trim()) return [];
-    const lowerQuery = query.toLowerCase();
-    return customers.filter(c => 
-      c.name.toLowerCase().includes(lowerQuery) ||
-      c.phone?.includes(query)
-    );
-  }, [customers]);
+  const findCustomers = useCallback(async (query: string) => {
+    try {
+      const results = await api.getCustomers(query);
+      return results.map(convertApiCustomer);
+    } catch (error: any) {
+      console.error('Error finding customers:', error.message);
+      return [];
+    }
+  }, []);
 
+  // Cart management (local state)
   const addToCart = useCallback((product: Product) => {
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
@@ -127,34 +226,48 @@ export function useStore() {
     return cart.reduce((total, item) => total + (getDiscountAmount(item) * item.quantity), 0);
   }, [cart]);
 
-  const checkout = useCallback((
-    customer?: Customer, 
+  // Checkout - creates transaction via API
+  const checkout = useCallback(async (
+    customer?: Customer,
     paymentMethod: 'cash' | 'transfer' = 'cash',
     amountPaid?: number
   ) => {
-    const total = getCartTotal();
-    const totalDiscount = getCartTotalDiscount();
-    const transaction: Transaction = {
-      id: Date.now().toString(),
-      items: [...cart],
-      customer,
-      total,
-      totalDiscount,
-      amountPaid: amountPaid || total,
-      change: (amountPaid || total) - total,
-      date: new Date(),
-      paymentMethod,
-    };
-    setTransactions(prev => [transaction, ...prev]);
-    
-    // Update stock
-    cart.forEach(item => {
-      updateProduct(item.id, { stock: item.stock - item.quantity });
-    });
-    
-    clearCart();
-    return transaction;
-  }, [cart, getCartTotal, getCartTotalDiscount, updateProduct, clearCart]);
+    try {
+      const total = getCartTotal();
+      const totalDiscount = getCartTotalDiscount();
+
+      const transactionData = await api.createTransaction({
+        items: cart.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          discount_type: item.discountType,
+          discount_value: item.discountValue,
+        })),
+        customerId: customer?.id,
+        total,
+        totalDiscount,
+        amountPaid: amountPaid || total,
+        change: (amountPaid || total) - total,
+        paymentMethod,
+        date: new Date().toISOString(),
+      });
+
+      const newTransaction = convertApiTransaction(transactionData);
+      setTransactions(prev => [newTransaction, ...prev]);
+
+      // Refresh products to get updated stock
+      const updatedProducts = await api.getProducts();
+      setProducts(updatedProducts.map(convertApiProduct));
+
+      clearCart();
+      return newTransaction;
+    } catch (error: any) {
+      console.error('Error during checkout:', error.message);
+      throw error;
+    }
+  }, [cart, getCartTotal, getCartTotalDiscount, clearCart]);
 
   return {
     products,
@@ -162,6 +275,7 @@ export function useStore() {
     customers,
     cart,
     transactions,
+    loading,
     addProduct,
     updateProduct,
     deleteProduct,

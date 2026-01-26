@@ -15,9 +15,9 @@ interface CashierPageProps {
   onUpdateQuantity: (id: string, quantity: number) => void;
   onRemoveFromCart: (id: string) => void;
   onClearCart: () => void;
-  onCheckout: (customer?: Customer, paymentMethod?: 'cash' | 'transfer', amountPaid?: number) => Transaction;
-  onFindCustomers: (query: string) => Customer[];
-  onAddCustomer: (customer: Omit<Customer, 'id'>) => Customer;
+  onCheckout: (customer?: Customer, paymentMethod?: 'cash' | 'transfer', amountPaid?: number) => Promise<Transaction>;
+  onFindCustomers: (query: string) => Promise<Customer[]>;
+  onAddCustomer: (customer: Omit<Customer, 'id'>) => Promise<Customer>;
   cartTotal: number;
   cartTotalDiscount: number;
 }
@@ -45,8 +45,8 @@ export function CashierPage({
     product.category.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleCheckout = (customer?: Customer, paymentMethod?: 'cash' | 'transfer', amountPaid?: number) => {
-    const transaction = onCheckout(customer, paymentMethod, amountPaid);
+  const handleCheckout = async (customer?: Customer, paymentMethod?: 'cash' | 'transfer', amountPaid?: number) => {
+    const transaction = await onCheckout(customer, paymentMethod, amountPaid);
     setLastTransaction(transaction);
     setShowReceipt(true);
   };

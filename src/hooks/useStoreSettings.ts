@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { StoreSettings, ThemeTone } from '@/types';
+import { api } from '@/lib/api';
 
 const DEFAULT_SETTINGS: StoreSettings = {
   storeName: 'TokoKu',
@@ -37,18 +38,36 @@ const THEME_COLORS: Record<ThemeTone, { primary: string; accent: string; ring: s
   },
 };
 
+// Convert API Settings to local Settings format
+const convertApiSettings = (s: any): StoreSettings => ({
+  storeName: s.store_name,
+  storeAddress: s.store_address,
+  storePhone: s.store_phone,
+  themeTone: s.theme_tone,
+  backgroundImage: s.background_image,
+});
+
 export function useStoreSettings() {
-  const [settings, setSettings] = useState<StoreSettings>(() => {
-    const saved = localStorage.getItem('store-settings');
-    if (saved) {
+  const [settings, setSettings] = useState<StoreSettings>(DEFAULT_SETTINGS);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch settings from API
+  useEffect(() => {
+    const fetchSettings = async () => {
+      setLoading(true);
       try {
-        return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
-      } catch {
-        return DEFAULT_SETTINGS;
+        const data = await api.getSettings();
+        if (data) {
+          setSettings(convertApiSettings(data));
+        }
+      } catch (error) {
+        console.error('Error fetching settings:', error);
+      } finally {
+        setLoading(false);
       }
-    }
-    return DEFAULT_SETTINGS;
-  });
+    };
+    fetchSettings();
+  }, []);
 
   // Apply theme colors to CSS variables
   useEffect(() => {
@@ -66,13 +85,23 @@ export function useStoreSettings() {
     root.style.setProperty('--sidebar-ring', colors.ring);
   }, [settings.themeTone]);
 
-  // Save to localStorage
-  useEffect(() => {
-    localStorage.setItem('store-settings', JSON.stringify(settings));
-  }, [settings]);
-
-  const updateSettings = (updates: Partial<StoreSettings>) => {
+  const updateSettings = async (updates: Partial<StoreSettings>) => {
+    // Optimistic update
     setSettings(prev => ({ ...prev, ...updates }));
+
+    try {
+      const apiSettings = {
+        store_name: updates.storeName || settings.storeName,
+        store_address: updates.storeAddress || settings.storeAddress,
+        store_phone: updates.storePhone || settings.storePhone,
+        theme_tone: updates.themeTone || settings.themeTone,
+        background_image: updates.backgroundImage !== undefined ? updates.backgroundImage : settings.backgroundImage,
+      };
+      await api.updateSettings(apiSettings as any);
+    } catch (error) {
+      console.error('Error updating settings:', error);
+      // Revert on error? For now, we just log it.
+    }
   };
 
   const setBackgroundImage = (imageData: string | undefined) => {
@@ -89,5 +118,6 @@ export function useStoreSettings() {
     setBackgroundImage,
     setThemeTone,
     themeColors: THEME_COLORS,
+    loading,
   };
 }

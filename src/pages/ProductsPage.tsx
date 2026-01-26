@@ -33,11 +33,11 @@ import {
 interface ProductsPageProps {
   products: Product[];
   categories: Category[];
-  onAddProduct: (product: Omit<Product, 'id'>) => void;
-  onUpdateProduct: (id: string, updates: Partial<Product>) => void;
-  onDeleteProduct: (id: string) => void;
-  onAddCategory: (category: Omit<Category, 'id'>) => void;
-  onDeleteCategory: (id: string) => void;
+  onAddProduct: (product: Omit<Product, 'id'>) => Promise<void> | void;
+  onUpdateProduct: (id: string, updates: Partial<Product>) => Promise<void> | void;
+  onDeleteProduct: (id: string) => Promise<void> | void;
+  onAddCategory: (category: Omit<Category, 'id'>) => Promise<Category> | void;
+  onDeleteCategory: (id: string) => Promise<void> | void;
 }
 
 export function ProductsPage({
@@ -73,18 +73,18 @@ export function ProductsPage({
     setShowForm(true);
   };
 
-  const handleSubmit = (productData: Omit<Product, 'id'>) => {
+  const handleSubmit = async (productData: Omit<Product, 'id'>) => {
     if (editingProduct) {
-      onUpdateProduct(editingProduct.id, productData);
+      await onUpdateProduct(editingProduct.id, productData);
       setEditingProduct(null);
     } else {
-      onAddProduct(productData);
+      await onAddProduct(productData);
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deletingProduct) {
-      onDeleteProduct(deletingProduct.id);
+      await onDeleteProduct(deletingProduct.id);
       setDeletingProduct(null);
     }
   };
