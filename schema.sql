@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS transactions (
 CREATE TABLE IF NOT EXISTS transaction_items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   transaction_id TEXT NOT NULL,
-  product_id TEXT NOT NULL,
+  product_id TEXT,
   product_name TEXT NOT NULL,
   quantity INTEGER NOT NULL,
   price INTEGER NOT NULL,

@@ -30,6 +30,8 @@ import {
   CollapsibleContent,
 } from '@/components/ui/collapsible';
 
+import { toast } from 'sonner';
+
 interface ProductsPageProps {
   products: Product[];
   categories: Category[];
@@ -74,18 +76,31 @@ export function ProductsPage({
   };
 
   const handleSubmit = async (productData: Omit<Product, 'id'>) => {
-    if (editingProduct) {
-      await onUpdateProduct(editingProduct.id, productData);
-      setEditingProduct(null);
-    } else {
-      await onAddProduct(productData);
+    try {
+      if (editingProduct) {
+        await onUpdateProduct(editingProduct.id, productData);
+        toast.success('Produk berhasil diperbarui');
+        setEditingProduct(null);
+      } else {
+        await onAddProduct(productData);
+        toast.success('Produk berhasil ditambahkan');
+      }
+    } catch (error) {
+      toast.error('Gagal menyimpan produk');
+      console.error(error);
     }
   };
 
   const handleDelete = async () => {
     if (deletingProduct) {
-      await onDeleteProduct(deletingProduct.id);
-      setDeletingProduct(null);
+      try {
+        await onDeleteProduct(deletingProduct.id);
+        toast.success('Produk berhasil dihapus');
+        setDeletingProduct(null);
+      } catch (error) {
+        toast.error('Gagal menghapus produk');
+        console.error(error);
+      }
     }
   };
 

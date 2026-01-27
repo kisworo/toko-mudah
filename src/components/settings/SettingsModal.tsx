@@ -116,7 +116,8 @@ export function SettingsModal({ open, onClose, settings, onUpdateSettings }: Set
 
   const handleRemoveBackground = async () => {
     try {
-      await onUpdateSettings({ backgroundImage: undefined });
+      // Use empty string to signal removal (converted to null in hook)
+      await onUpdateSettings({ backgroundImage: '' });
       toast.success('Background berhasil dihapus');
     } catch (error) {
       toast.error('Gagal menghapus background');
@@ -170,7 +171,8 @@ export function SettingsModal({ open, onClose, settings, onUpdateSettings }: Set
 
   const handleRemoveLogo = async () => {
     try {
-      await onUpdateSettings({ storeLogo: undefined });
+      // Use empty string to signal removal (converted to null in hook)
+      await onUpdateSettings({ storeLogo: '' });
       toast.success('Logo berhasil dihapus');
     } catch (error) {
       toast.error('Gagal menghapus logo');
