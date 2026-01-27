@@ -47,10 +47,10 @@ const convertApiTransaction = (t: any, cartItems?: CartItem[]): Transaction => {
   return {
     id: t.id,
     items,
-    customer: t.customer_id ? {
-      id: t.customer_id,
-      name: t.customer_name || 'Unknown',
-      phone: t.customer_phone,
+    customer: t.customer ? {
+      id: t.customer.id,
+      name: t.customer.name || 'Unknown',
+      phone: t.customer.phone,
     } : undefined,
     total: t.total,
     totalDiscount: t.total_discount,
@@ -84,7 +84,7 @@ export function useStore() {
         setProducts(productsData.map(convertApiProduct));
         setCategories(categoriesData.map(convertApiCategory));
         setCustomers(customersData.map(convertApiCustomer));
-        setTransactions(transactionsData.map(convertApiTransaction));
+        setTransactions(transactionsData.map(t => convertApiTransaction(t)));
       } catch (error: any) {
         console.error('Error fetching data:', error.message);
       } finally {

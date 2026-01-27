@@ -52,10 +52,12 @@ export function AppLayout({ children, settings, onOpenSettings, isAuthenticated 
     window.location.reload();
   };
 
+  const showAuthNav = isAuthenticated && location.pathname !== "/";
+
   return (
     <div className="min-h-screen bg-background relative">
       {/* Background Image */}
-      {settings?.backgroundImage && (
+      {settings?.backgroundImage && location.pathname !== "/" && (
         <div 
           className="fixed inset-0 bg-cover bg-center bg-no-repeat opacity-10 pointer-events-none z-0"
           style={{ backgroundImage: `url(${settings.backgroundImage})` }}
@@ -65,7 +67,7 @@ export function AppLayout({ children, settings, onOpenSettings, isAuthenticated 
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur-sm shadow-sm">
         <div className="container flex h-14 items-center justify-between">
-          <Link to={isAuthenticated ? "/cashier" : "/"} className="flex items-center gap-2">
+          <Link to={showAuthNav ? "/cashier" : "/"} className="flex items-center gap-2">
             {settings?.storeLogo ? (
               <div className="h-8 w-8 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
                 <img
@@ -84,7 +86,7 @@ export function AppLayout({ children, settings, onOpenSettings, isAuthenticated 
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-1">
-            {isAuthenticated ? (
+            {showAuthNav ? (
               <>
                 {navItems.map(item => (
                   <Link key={item.path} to={item.path}>
@@ -130,7 +132,7 @@ export function AppLayout({ children, settings, onOpenSettings, isAuthenticated 
 
           {/* Mobile Menu Button */}
           <div className="flex items-center gap-1 md:hidden">
-            {isAuthenticated && (
+            {showAuthNav && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -152,7 +154,7 @@ export function AppLayout({ children, settings, onOpenSettings, isAuthenticated 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
           <nav className="md:hidden border-t bg-card p-2 animate-fade-in">
-            {isAuthenticated ? (
+            {showAuthNav ? (
               <>
                 {navItems.map(item => (
                   <Link

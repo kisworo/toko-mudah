@@ -34,9 +34,7 @@ export interface TransactionItem {
 
 export interface Transaction {
   id: string;
-  customer_id?: string;
-  customer_name?: string;
-  customer_phone?: string;
+  customer?: Customer;
   total: number;
   total_discount: number;
   amount_paid: number;
@@ -200,8 +198,13 @@ class ApiClient {
   }
 
   // Transactions
-  getTransactions(): Promise<Transaction[]> {
-    return this.request<Transaction[]>('/api/transactions');
+  getTransactions(startDate?: string, endDate?: string): Promise<Transaction[]> {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    return this.request<Transaction[]>(`/api/transactions${queryString}`);
   }
 
   createTransaction(data: {

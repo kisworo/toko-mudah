@@ -371,9 +371,9 @@ export function HomePage() {
               <p className="text-muted-foreground mt-1">Solusi kasir modern untuk UMKM Indonesia</p>
             </div>
             <div className="flex gap-6 text-sm text-muted-foreground">
-              <Link to="#" className="hover:text-primary transition-colors">Tentang</Link>
-              <Link to="#" className="hover:text-primary transition-colors">Bantuan</Link>
-              <Link to="#" className="hover:text-primary transition-colors">Kontak</Link>
+              <Link to="/about" className="hover:text-primary transition-colors">Tentang</Link>
+              <Link to="/help" className="hover:text-primary transition-colors">Bantuan</Link>
+              <Link to="/contact" className="hover:text-primary transition-colors">Kontak</Link>
             </div>
           </div>
           <div className="mt-8 pt-8 border-t text-center text-sm text-muted-foreground">

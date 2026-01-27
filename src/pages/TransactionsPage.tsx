@@ -1,24 +1,50 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { format, subDays, eachDayOfInterval, isWithinInterval, parseISO } from 'date-fns';
+import { id } from 'date-fns/locale';
 import { Transaction } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ReceiptModal } from '@/components/pos/ReceiptModal';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Label } from '@/components/ui/label';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { 
   Search, 
   Receipt, 
-  Calendar,
+  Calendar as CalendarIcon,
   User,
-  Printer
+  Printer,
+  TrendingUp,
+  DollarSign,
+  ChevronDown
 } from 'lucide-react';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  LineChart,
+  Line,
+  ResponsiveContainer 
+} from 'recharts';
+
+import { StoreSettings } from '@/types';
 
 interface TransactionsPageProps {
   transactions: Transaction[];
+  settings: StoreSettings;
 }
 
-export function TransactionsPage({ transactions }: TransactionsPageProps) {
+export function TransactionsPage({ transactions, settings }: TransactionsPageProps) {
   const [search, setSearch] = useState('');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
+    from: subDays(new Date(), 30),
+    to: new Date()
+  });
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -35,23 +61,48 @@ export function TransactionsPage({ transactions }: TransactionsPageProps) {
     }).format(date);
   };
 
-  const filteredTransactions = transactions.filter(tx => {
-    const searchLower = search.toLowerCase();
-    return (
-      tx.id.includes(search) ||
-      tx.customer?.name?.toLowerCase().includes(searchLower) ||
-      tx.items.some(item => item.name.toLowerCase().includes(searchLower))
-    );
-  });
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter(tx => {
+      const txDate = tx.date instanceof Date ? tx.date : new Date(tx.date);
+      const inDateRange = isWithinInterval(txDate, { start: dateRange.from, end: dateRange.to });
+      const searchLower = search.toLowerCase();
+      const matchesSearch = (
+        tx.id.includes(search) ||
+        tx.customer?.name?.toLowerCase().includes(searchLower) ||
+        tx.items.some(item => item.name.toLowerCase().includes(searchLower))
+      );
+      return inDateRange && matchesSearch;
+    });
+  }, [transactions, dateRange, search]);
+
+  // Calculate daily chart data
+  const chartData = useMemo(() => {
+    const days = eachDayOfInterval({ start: dateRange.from, end: dateRange.to });
+    
+    return days.map(day => {
+      const dayTransactions = filteredTransactions.filter(tx => {
+        const txDate = tx.date instanceof Date ? tx.date : new Date(tx.date);
+        return txDate.toDateString() === day.toDateString();
+      });
+      
+      const dailySales = dayTransactions.reduce((sum, tx) => sum + tx.total, 0);
+      const dailyDiscounts = dayTransactions.reduce((sum, tx) => sum + tx.totalDiscount, 0);
+      const dailyProfit = dailySales - dailyDiscounts;
+      
+      return {
+        date: format(day, 'dd MMM', { locale: id }),
+        fullDate: day,
+        sales: dailySales,
+        profit: dailyProfit,
+        transactions: dayTransactions.length
+      };
+    });
+  }, [filteredTransactions, dateRange]);
 
   // Calculate totals
-  const totalRevenue = transactions.reduce((sum, tx) => sum + tx.total, 0);
-  const todayTransactions = transactions.filter(tx => {
-    const today = new Date();
-    const txDate = new Date(tx.date);
-    return txDate.toDateString() === today.toDateString();
-  });
-  const todayRevenue = todayTransactions.reduce((sum, tx) => sum + tx.total, 0);
+  const totalRevenue = filteredTransactions.reduce((sum, tx) => sum + tx.total, 0);
+  const totalProfit = filteredTransactions.reduce((sum, tx) => sum + (tx.total - tx.totalDiscount), 0);
+  const totalTransactions = filteredTransactions.length;
 
   return (
     <div className="space-y-4">
@@ -59,33 +110,132 @@ export function TransactionsPage({ transactions }: TransactionsPageProps) {
       <div>
         <h1 className="text-2xl font-bold">Riwayat Transaksi</h1>
         <p className="text-muted-foreground text-sm">
-          {transactions.length} transaksi total
+          {totalTransactions} transaksi
         </p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3">
         <Card className="p-4">
-          <p className="text-sm text-muted-foreground">Hari Ini</p>
-          <p className="text-xl font-bold text-primary">{formatPrice(todayRevenue)}</p>
-          <p className="text-xs text-muted-foreground">{todayTransactions.length} transaksi</p>
+          <p className="text-sm text-muted-foreground">Penjualan</p>
+          <p className="text-xl font-bold text-primary">{formatPrice(totalRevenue)}</p>
+          <p className="text-xs text-muted-foreground">{totalTransactions} transaksi</p>
         </Card>
         <Card className="p-4">
-          <p className="text-sm text-muted-foreground">Total Pendapatan</p>
-          <p className="text-xl font-bold">{formatPrice(totalRevenue)}</p>
-          <p className="text-xs text-muted-foreground">{transactions.length} transaksi</p>
+          <p className="text-sm text-muted-foreground">Laba</p>
+          <p className="text-xl font-bold text-green-600">{formatPrice(totalProfit)}</p>
+          <p className="text-xs text-muted-foreground">{formatPrice(totalRevenue - totalProfit)} diskon</p>
         </Card>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Cari transaksi..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
+      {/* Date Range & Search */}
+      <div className="flex gap-3">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Cari transaksi..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="gap-2 min-w-[200px] justify-start">
+              <CalendarIcon className="h-4 w-4" />
+              <span className="flex-1 text-left">
+                {dateRange.from ? format(dateRange.from, 'dd MMM', { locale: id }) : ''} - {dateRange.to ? format(dateRange.to, 'dd MMM', { locale: id }) : ''}
+              </span>
+              <ChevronDown className="h-4 w-4 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0 bg-popover border shadow-lg z-50" align="end">
+            <div className="bg-background rounded-md border p-1">
+              <Calendar
+                mode="range"
+                selected={{
+                  from: dateRange.from,
+                  to: dateRange.to
+                }}
+                onSelect={(range) => {
+                  if (range?.from && range?.to) {
+                    setDateRange({ from: range.from, to: range.to });
+                  }
+                }}
+                numberOfMonths={2}
+                className="rounded-md border-none"
+              />
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {/* Charts */}
+      <div className="space-y-4">
+        {/* Sales Chart */}
+        <Card className="p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <DollarSign className="h-5 w-5 text-primary" />
+            <h3 className="font-semibold">Grafik Penjualan Harian</h3>
+          </div>
+          <ChartContainer config={{ sales: { label: 'Penjualan', color: 'hsl(var(--primary))' } }} className="h-[200px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis 
+                  dataKey="date" 
+                  tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis 
+                  tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => formatPrice(value).split(',')[0]}
+                />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="sales" radius={[4, 4, 0, 0]} fill="var(--color-sales)" />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        </Card>
+
+        {/* Profit Chart */}
+        <Card className="p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="h-5 w-5 text-green-600" />
+            <h3 className="font-semibold">Grafik Laba Harian</h3>
+          </div>
+          <ChartContainer config={{ profit: { label: 'Laba', color: 'hsl(142, 76%, 36%)' } }} className="h-[200px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis 
+                  dataKey="date" 
+                  tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis 
+                  tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => formatPrice(value).split(',')[0]}
+                />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Line 
+                  type="monotone" 
+                  dataKey="profit" 
+                  stroke="var(--color-profit)" 
+                  strokeWidth={2}
+                  dot={{ fill: 'var(--color-profit)', strokeWidth: 0, r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        </Card>
       </div>
 
       {/* Transactions List */}
@@ -105,7 +255,7 @@ export function TransactionsPage({ transactions }: TransactionsPageProps) {
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                    <Calendar className="h-3 w-3" />
+                    <CalendarIcon className="h-3 w-3" />
                     <span>{formatDate(tx.date)}</span>
                   </div>
                   {tx.customer && (
@@ -149,6 +299,7 @@ export function TransactionsPage({ transactions }: TransactionsPageProps) {
         transaction={selectedTransaction}
         open={!!selectedTransaction}
         onClose={() => setSelectedTransaction(null)}
+        settings={settings}
       />
     </div>
   );

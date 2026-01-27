@@ -9,6 +9,7 @@ import { HomePage } from "@/pages/HomePage";
 import { CashierPage } from "@/pages/CashierPage";
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { RegisterPage } from "@/pages/auth/RegisterPage";
+import { AboutPage, HelpPage, ContactPage } from "@/pages/SupportPages";
 import { Navigate } from "react-router-dom";
 import { ProductsPage } from "@/pages/ProductsPage";
 import { TransactionsPage } from "@/pages/TransactionsPage";
@@ -62,8 +63,11 @@ function AppContent() {
       onOpenSettings={() => setShowSettings(true)}
       isAuthenticated={isAuthenticated}
     >
-      <Routes>
+        <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/help" element={<HelpPage />} />
+        <Route path="/contact" element={<ContactPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         
@@ -109,7 +113,7 @@ function AppContent() {
           path="/transactions"
           element={
             <ProtectedRoute>
-              <TransactionsPage transactions={transactions} />
+              <TransactionsPage transactions={transactions} settings={settings} />
             </ProtectedRoute>
           }
         />

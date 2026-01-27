@@ -321,23 +321,87 @@ export default {
         if (!userId) {
           return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
         }
-        const { results } = await env.DB.prepare(
-          `SELECT t.*, c.name as customer_name, c.phone as customer_phone
-           FROM transactions t
-           LEFT JOIN customers c ON t.customer_id = c.id AND c.user_id = t.user_id
-           WHERE t.user_id = ?
-           ORDER BY t.date DESC`
-        ).bind(userId).all();
 
-        // Get items for each transaction
-        const transactions = await Promise.all(
-          results.map(async (transaction: any) => {
-            const { results: items } = await env.DB.prepare(
-              'SELECT * FROM transaction_items WHERE transaction_id = ?'
-            ).bind(transaction.id).all();
-            return { ...transaction, items };
-          })
-        );
+        const startDate = url.searchParams.get('startDate');
+        const endDate = url.searchParams.get('endDate');
+
+        // Build query for transactions
+        let sql = `SELECT t.*, c.name as customer_name, c.phone as customer_phone
+           FROM transactions t
+           LEFT JOIN customers c ON t.customer_id = c.id
+           WHERE t.user_id = ?`;
+        
+        const params: any[] = [userId];
+
+        if (startDate) {
+          sql += ` AND t.date >= ?`;
+          params.push(startDate);
+        }
+        if (endDate) {
+          sql += ` AND t.date <= ?`;
+          params.push(endDate);
+        }
+
+        sql += ` ORDER BY t.date DESC`;
+
+        // Fetch transactions
+        const { results: transactionsRaw } = await env.DB.prepare(sql).bind(...params).all();
+
+        if (transactionsRaw.length === 0) {
+          return Response.json([], { headers: corsHeaders });
+        }
+
+        // Fetch all items for these transactions efficiently
+        // We use a JOIN to filter items by the same criteria (user_id and date range)
+        // to avoid passing massive list of IDs
+        let itemsSql = `SELECT ti.* 
+          FROM transaction_items ti
+          JOIN transactions t ON ti.transaction_id = t.id
+          WHERE t.user_id = ?`;
+        
+        const itemsParams: any[] = [userId];
+
+        if (startDate) {
+          itemsSql += ` AND t.date >= ?`;
+          itemsParams.push(startDate);
+        }
+        if (endDate) {
+          itemsSql += ` AND t.date <= ?`;
+          itemsParams.push(endDate);
+        }
+
+        const { results: itemsRaw } = await env.DB.prepare(itemsSql).bind(...itemsParams).all();
+
+        // Group items by transaction_id
+        const itemsMap = new Map<string, any[]>();
+        itemsRaw.forEach((item: any) => {
+          if (!itemsMap.has(item.transaction_id)) {
+            itemsMap.set(item.transaction_id, []);
+          }
+          itemsMap.get(item.transaction_id)?.push(item);
+        });
+
+        // Assemble result with proper structure
+        const transactions = transactionsRaw.map((t: any) => {
+          // Construct customer object if customer data exists
+          let customer = undefined;
+          if (t.customer_name) {
+            customer = {
+              id: t.customer_id,
+              name: t.customer_name,
+              phone: t.customer_phone
+            };
+          }
+
+          // Clean up flat fields
+          const { customer_name, customer_phone, ...txData } = t;
+
+          return {
+            ...txData,
+            customer,
+            items: itemsMap.get(t.id) || []
+          };
+        });
 
         return Response.json(transactions, { headers: corsHeaders });
       }
@@ -349,8 +413,10 @@ export default {
         const data = await request.json() as any;
         const id = Date.now().toString();
 
-        // Start transaction
-        await env.DB.prepare(
+        const batch = [];
+
+        // 1. Insert Transaction
+        batch.push(env.DB.prepare(
           `INSERT INTO transactions (id, user_id, customer_id, total, total_discount, amount_paid, change_amount, payment_method, date)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
@@ -363,11 +429,12 @@ export default {
           data.change,
           data.paymentMethod,
           data.date
-        ).run();
+        ));
 
-        // Insert transaction items
+        // 2. Insert Items & Update Stock
         for (const item of data.items) {
-          await env.DB.prepare(
+          // Insert item
+          batch.push(env.DB.prepare(
             `INSERT INTO transaction_items (transaction_id, product_id, product_name, quantity, price, discount_type, discount_value)
              VALUES (?, ?, ?, ?, ?, ?, ?)`
           ).bind(
@@ -378,22 +445,52 @@ export default {
             item.price,
             item.discountType || null,
             item.discountValue || null
-          ).run();
+          ));
 
-          // Update product stock (only for this user's products)
-          await env.DB.prepare(
-            'UPDATE products SET stock = stock - ? WHERE id = ? AND user_id = ?'
-          ).bind(item.quantity, item.id, userId).run();
+          // Update stock
+          if (item.id) { // Only update stock if product exists in DB (has ID)
+            batch.push(env.DB.prepare(
+              'UPDATE products SET stock = stock - ? WHERE id = ? AND user_id = ?'
+            ).bind(item.quantity, item.id, userId));
+          }
         }
 
+        // Execute batch
+        await env.DB.batch(batch);
+
+        // Fetch the created transaction to return
+        // We need to construct the response manually or fetch it
+        // Fetching is safer to get the exact DB state
+        
         const transaction = await env.DB.prepare(
           `SELECT t.*, c.name as customer_name, c.phone as customer_phone
            FROM transactions t
-           LEFT JOIN customers c ON t.customer_id = c.id AND c.user_id = t.user_id
+           LEFT JOIN customers c ON t.customer_id = c.id
            WHERE t.id = ?`
-        ).bind(id).first();
+        ).bind(id).first() as any;
 
-        return Response.json(transaction, { headers: corsHeaders });
+        const { results: items } = await env.DB.prepare(
+           'SELECT * FROM transaction_items WHERE transaction_id = ?'
+        ).bind(id).all();
+
+        // Format response
+        let customer = undefined;
+        if (transaction.customer_name) {
+          customer = {
+            id: transaction.customer_id,
+            name: transaction.customer_name,
+            phone: transaction.customer_phone
+          };
+        }
+        const { customer_name, customer_phone, ...txData } = transaction;
+
+        const result = {
+          ...txData,
+          customer,
+          items
+        };
+
+        return Response.json(result, { headers: corsHeaders });
       }
 
       // Settings API (per user)

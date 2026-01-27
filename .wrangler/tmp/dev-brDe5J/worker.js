@@ -1,7 +1,7 @@
 var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
-// .wrangler/tmp/bundle-NA4rAY/checked-fetch.js
+// .wrangler/tmp/bundle-DfCivc/checked-fetch.js
 var urls = /* @__PURE__ */ new Set();
 function checkURL(request, init) {
   const url = request instanceof URL ? request : new URL(
@@ -572,21 +572,63 @@ var worker_default = {
         if (!userId) {
           return Response.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
         }
-        const { results } = await env.DB.prepare(
-          `SELECT t.*, c.name as customer_name, c.phone as customer_phone
+        const startDate = url.searchParams.get("startDate");
+        const endDate = url.searchParams.get("endDate");
+        let sql = `SELECT t.*, c.name as customer_name, c.phone as customer_phone
            FROM transactions t
-           LEFT JOIN customers c ON t.customer_id = c.id AND c.user_id = t.user_id
-           WHERE t.user_id = ?
-           ORDER BY t.date DESC`
-        ).bind(userId).all();
-        const transactions = await Promise.all(
-          results.map(async (transaction) => {
-            const { results: items } = await env.DB.prepare(
-              "SELECT * FROM transaction_items WHERE transaction_id = ?"
-            ).bind(transaction.id).all();
-            return { ...transaction, items };
-          })
-        );
+           LEFT JOIN customers c ON t.customer_id = c.id
+           WHERE t.user_id = ?`;
+        const params = [userId];
+        if (startDate) {
+          sql += ` AND t.date >= ?`;
+          params.push(startDate);
+        }
+        if (endDate) {
+          sql += ` AND t.date <= ?`;
+          params.push(endDate);
+        }
+        sql += ` ORDER BY t.date DESC`;
+        const { results: transactionsRaw } = await env.DB.prepare(sql).bind(...params).all();
+        if (transactionsRaw.length === 0) {
+          return Response.json([], { headers: corsHeaders });
+        }
+        let itemsSql = `SELECT ti.* 
+          FROM transaction_items ti
+          JOIN transactions t ON ti.transaction_id = t.id
+          WHERE t.user_id = ?`;
+        const itemsParams = [userId];
+        if (startDate) {
+          itemsSql += ` AND t.date >= ?`;
+          itemsParams.push(startDate);
+        }
+        if (endDate) {
+          itemsSql += ` AND t.date <= ?`;
+          itemsParams.push(endDate);
+        }
+        const { results: itemsRaw } = await env.DB.prepare(itemsSql).bind(...itemsParams).all();
+        const itemsMap = /* @__PURE__ */ new Map();
+        itemsRaw.forEach((item) => {
+          if (!itemsMap.has(item.transaction_id)) {
+            itemsMap.set(item.transaction_id, []);
+          }
+          itemsMap.get(item.transaction_id)?.push(item);
+        });
+        const transactions = transactionsRaw.map((t) => {
+          let customer = void 0;
+          if (t.customer_name) {
+            customer = {
+              id: t.customer_id,
+              name: t.customer_name,
+              phone: t.customer_phone
+            };
+          }
+          const { customer_name, customer_phone, ...txData } = t;
+          return {
+            ...txData,
+            customer,
+            items: itemsMap.get(t.id) || []
+          };
+        });
         return Response.json(transactions, { headers: corsHeaders });
       }
       if (path === "/api/transactions" && request.method === "POST") {
@@ -595,7 +637,8 @@ var worker_default = {
         }
         const data = await request.json();
         const id = Date.now().toString();
-        await env.DB.prepare(
+        const batch = [];
+        batch.push(env.DB.prepare(
           `INSERT INTO transactions (id, user_id, customer_id, total, total_discount, amount_paid, change_amount, payment_method, date)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
@@ -608,9 +651,9 @@ var worker_default = {
           data.change,
           data.paymentMethod,
           data.date
-        ).run();
+        ));
         for (const item of data.items) {
-          await env.DB.prepare(
+          batch.push(env.DB.prepare(
             `INSERT INTO transaction_items (transaction_id, product_id, product_name, quantity, price, discount_type, discount_value)
              VALUES (?, ?, ?, ?, ?, ?, ?)`
           ).bind(
@@ -621,18 +664,38 @@ var worker_default = {
             item.price,
             item.discountType || null,
             item.discountValue || null
-          ).run();
-          await env.DB.prepare(
-            "UPDATE products SET stock = stock - ? WHERE id = ? AND user_id = ?"
-          ).bind(item.quantity, item.id, userId).run();
+          ));
+          if (item.id) {
+            batch.push(env.DB.prepare(
+              "UPDATE products SET stock = stock - ? WHERE id = ? AND user_id = ?"
+            ).bind(item.quantity, item.id, userId));
+          }
         }
+        await env.DB.batch(batch);
         const transaction = await env.DB.prepare(
           `SELECT t.*, c.name as customer_name, c.phone as customer_phone
            FROM transactions t
-           LEFT JOIN customers c ON t.customer_id = c.id AND c.user_id = t.user_id
+           LEFT JOIN customers c ON t.customer_id = c.id
            WHERE t.id = ?`
         ).bind(id).first();
-        return Response.json(transaction, { headers: corsHeaders });
+        const { results: items } = await env.DB.prepare(
+          "SELECT * FROM transaction_items WHERE transaction_id = ?"
+        ).bind(id).all();
+        let customer = void 0;
+        if (transaction.customer_name) {
+          customer = {
+            id: transaction.customer_id,
+            name: transaction.customer_name,
+            phone: transaction.customer_phone
+          };
+        }
+        const { customer_name, customer_phone, ...txData } = transaction;
+        const result = {
+          ...txData,
+          customer,
+          items
+        };
+        return Response.json(result, { headers: corsHeaders });
       }
       if (path === "/api/settings" && request.method === "GET") {
         if (!userId) {
@@ -783,7 +846,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-NA4rAY/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-DfCivc/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -815,7 +878,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-NA4rAY/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-DfCivc/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;
