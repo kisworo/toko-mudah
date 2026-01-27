@@ -29,30 +29,37 @@ const convertApiCustomer = (c: any): Customer => ({
 });
 
 // Convert API Transaction to local Transaction format
-const convertApiTransaction = (t: any): Transaction => ({
-  id: t.id,
-  items: t.items.map((item: any) => ({
-    id: item.product_id || item.id, // Fallback for safety
-    name: item.product_name || item.name,
-    price: item.price,
-    quantity: item.quantity,
-    stock: 0, // Transaction items don't track stock explicitly
-    category: '', // Not needed for history
-    discountType: item.discount_type,
-    discountValue: item.discount_value,
-  })),
-  customer: t.customer_id ? {
-    id: t.customer_id,
-    name: t.customer_name || 'Unknown',
-    phone: t.customer_phone,
-  } : undefined,
-  total: t.total,
-  totalDiscount: t.total_discount,
-  amountPaid: t.amount_paid,
-  change: t.change_amount,
-  date: new Date(t.date),
-  paymentMethod: t.payment_method,
-});
+const convertApiTransaction = (t: any, cartItems?: CartItem[]): Transaction => {
+  // Jika items tidak ada dari API tapi cartItems diberikan, gunakan cartItems
+  const items = t.items && Array.isArray(t.items) && t.items.length > 0
+    ? t.items.map((item: any) => ({
+        id: item.product_id || item.id,
+        name: item.product_name || item.name,
+        price: item.price,
+        quantity: item.quantity,
+        stock: 0,
+        category: '',
+        discountType: item.discount_type,
+        discountValue: item.discount_value,
+      }))
+    : (cartItems || []);
+
+  return {
+    id: t.id,
+    items,
+    customer: t.customer_id ? {
+      id: t.customer_id,
+      name: t.customer_name || 'Unknown',
+      phone: t.customer_phone,
+    } : undefined,
+    total: t.total,
+    totalDiscount: t.total_discount,
+    amountPaid: t.amount_paid,
+    change: t.change_amount,
+    date: new Date(t.date),
+    paymentMethod: t.payment_method,
+  };
+};
 
 export function useStore() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -254,7 +261,8 @@ export function useStore() {
         date: new Date().toISOString(),
       });
 
-      const newTransaction = convertApiTransaction(transactionData);
+      // Pass cart sebagai fallback jika API tidak return items
+      const newTransaction = convertApiTransaction(transactionData, cart);
       setTransactions(prev => [newTransaction, ...prev]);
 
       // Refresh products to get updated stock

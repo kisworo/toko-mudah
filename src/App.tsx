@@ -84,6 +84,7 @@ function AppContent() {
                 onAddCustomer={addCustomer}
                 cartTotal={getCartTotal()}
                 cartTotalDiscount={getCartTotalDiscount()}
+                settings={settings}
               />
             </ProtectedRoute>
           }

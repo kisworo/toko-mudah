@@ -1,4 +1,4 @@
-import { Transaction, getDiscountedPrice } from '@/types';
+import { Transaction, getDiscountedPrice, StoreSettings } from '@/types';
 import {
   Dialog,
   DialogContent,
@@ -14,9 +14,10 @@ interface ReceiptModalProps {
   open: boolean;
   onClose: () => void;
   autoPrint?: boolean;
+  settings: StoreSettings;
 }
 
-export function ReceiptModal({ transaction, open, onClose, autoPrint = true }: ReceiptModalProps) {
+export function ReceiptModal({ transaction, open, onClose, autoPrint = true, settings }: ReceiptModalProps) {
   const receiptRef = useRef<HTMLDivElement>(null);
   const hasPrinted = useRef(false);
 
@@ -36,7 +37,7 @@ export function ReceiptModal({ transaction, open, onClose, autoPrint = true }: R
 
   const generateReceiptHTML = () => {
     if (!transaction) return '';
-    
+
     let itemsHTML = transaction.items.map(item => {
       const discountedPrice = getDiscountedPrice(item);
       const hasDiscount = item.discountType && item.discountValue;
@@ -51,135 +52,165 @@ export function ReceiptModal({ transaction, open, onClose, autoPrint = true }: R
     `;
     }).join('');
 
+    const storeName = settings.storeName || 'Toko';
+    const storeAddress = settings.storeAddress || '';
+    const storePhone = settings.storePhone || '';
+
     return `
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Struk</title>
+  <title>Struk - #${transaction.id.slice(-6)}</title>
   <style>
-    @page { 
-      size: 58mm auto; 
-      margin: 0; 
+    @media print {
+      @page {
+        size: 80mm auto;
+        margin: 2mm;
+      }
+      body {
+        width: 76mm;
+        padding: 2mm;
+      }
+      .no-print {
+        display: none !important;
+      }
     }
+
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
+
     body {
-      font-family: 'Courier New', monospace;
-      font-size: 12px;
-      line-height: 1.3;
-      width: 58mm;
+      font-family: 'Courier New', 'Consolas', monospace;
+      font-size: 11px;
+      line-height: 1.2;
+      width: 76mm;
       padding: 3mm;
       background: white;
       color: black;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
+
     .center { text-align: center; }
     .right { text-align: right; }
     .bold { font-weight: bold; }
-    .divider { 
-      border-top: 1px dashed #000; 
-      margin: 6px 0; 
+    .divider {
+      border-top: 1px dashed #000;
+      margin: 5px 0;
     }
     .row {
       display: flex;
       justify-content: space-between;
     }
-    .title { font-size: 14px; font-weight: bold; }
-    .small { font-size: 10px; }
-    .large { font-size: 14px; }
+    .title { font-size: 13px; font-weight: bold; }
+    .small { font-size: 9px; }
+    .large { font-size: 12px; }
   </style>
 </head>
 <body>
   <div class="center">
-    <div class="title">TokoKu</div>
-    <div class="small">Jl. Contoh No. 123</div>
-    <div class="small">Telp: 08xx-xxxx-xxxx</div>
+    <div class="title">${storeName}</div>
+    ${storeAddress ? `<div class="small">${storeAddress}</div>` : ''}
+    ${storePhone ? `<div class="small">Telp: ${storePhone}</div>` : ''}
   </div>
-  
+
   <div class="divider"></div>
-  
+
   <div class="small">
     <div>No: #${transaction.id.slice(-6)}</div>
     <div>${formatDate(transaction.date)}</div>
     ${transaction.customer ? `<div>Pelanggan: ${transaction.customer.name}</div>` : ''}
   </div>
-  
+
   <div class="divider"></div>
-  
+
   <div>${itemsHTML}</div>
-  
+
   <div class="divider"></div>
-  
+
   ${transaction.totalDiscount > 0 ? `
   <div class="row small" style="color:#666">
     <span>Total Hemat</span>
     <span>-${formatPrice(transaction.totalDiscount)}</span>
   </div>
   ` : ''}
-  
+
   <div class="row bold">
     <span>TOTAL</span>
     <span class="large">${formatPrice(transaction.total)}</span>
   </div>
-  
+
   <div class="row small" style="margin-top:4px">
     <span>Bayar (${transaction.paymentMethod === 'cash' ? 'Tunai' : 'Transfer'})</span>
     <span>${formatPrice(transaction.amountPaid)}</span>
   </div>
-  
+
   ${transaction.change > 0 ? `
   <div class="row small">
     <span>Kembali</span>
     <span>${formatPrice(transaction.change)}</span>
   </div>
   ` : ''}
-  
+
   <div class="divider"></div>
-  
+
   <div class="center small">
     <div>Terima kasih!</div>
     <div>Selamat berbelanja kembali</div>
+    <div style="margin-top:5px;">***</div>
   </div>
-  
-  <div style="height: 10mm"></div>
+
+  <div style="height: 8mm"></div>
+
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        window.focus();
+        window.print();
+      }, 500);
+    };
+
+    window.onafterprint = function() {
+      window.close();
+    };
+  </script>
 </body>
 </html>`;
   };
 
   const handlePrint = () => {
     if (!transaction) return;
-    
-    const printWindow = window.open('', '_blank', 'width=250,height=500');
+
+    const printWindow = window.open('', '_blank', 'width=350,height=600');
     if (!printWindow) {
-      alert('Popup diblokir. Izinkan popup untuk mencetak struk.');
+      alert('Popup diblokir! Izinkan popup di browser untuk mencetak struk ke dot matrix.');
       return;
     }
 
+    // Tulis HTML ke window baru
+    printWindow.document.open();
     printWindow.document.write(generateReceiptHTML());
     printWindow.document.close();
-    
-    printWindow.onload = () => {
-      printWindow.focus();
-      printWindow.print();
-      printWindow.onafterprint = () => {
-        printWindow.close();
-      };
-    };
+
+    // Fokus ke window print agar print dialog muncul
+    printWindow.focus();
   };
 
-  // Auto print when transaction is completed
+  // Auto print ketika transaksi selesai
   useEffect(() => {
     if (open && transaction && autoPrint && !hasPrinted.current) {
       hasPrinted.current = true;
-      // Small delay to ensure modal is rendered
+      // Delay lebih lama untuk memastikan window print siap
       const timer = setTimeout(() => {
         handlePrint();
-      }, 300);
+      }, 800);
       return () => clearTimeout(timer);
     }
-    
+
+    // Reset flag saat modal ditutup
     if (!open) {
       hasPrinted.current = false;
     }
@@ -198,15 +229,15 @@ export function ReceiptModal({ transaction, open, onClose, autoPrint = true }: R
         </DialogHeader>
 
         {/* Receipt Preview */}
-        <div 
+        <div
           ref={receiptRef}
           className="mx-auto bg-white p-4 rounded-lg border shadow-inner font-mono text-xs"
           style={{ width: '220px' }}
         >
           <div className="text-center mb-2">
-            <p className="font-bold text-sm">TokoKu</p>
-            <p className="text-[10px]">Jl. Contoh No. 123</p>
-            <p className="text-[10px]">Telp: 08xx-xxxx-xxxx</p>
+            <p className="font-bold text-sm">{settings.storeName || 'Toko'}</p>
+            {settings.storeAddress && <p className="text-[10px]">{settings.storeAddress}</p>}
+            {settings.storePhone && <p className="text-[10px]">Telp: {settings.storePhone}</p>}
           </div>
 
           <div className="border-t border-dashed border-gray-400 my-2" />

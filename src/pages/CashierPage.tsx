@@ -6,6 +6,7 @@ import { CartPanel } from '@/components/pos/CartPanel';
 import { ReceiptModal } from '@/components/pos/ReceiptModal';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search } from 'lucide-react';
+import { StoreSettings } from '@/types';
 
 interface CashierPageProps {
   products: Product[];
@@ -20,6 +21,7 @@ interface CashierPageProps {
   onAddCustomer: (customer: Omit<Customer, 'id'>) => Promise<Customer>;
   cartTotal: number;
   cartTotalDiscount: number;
+  settings: StoreSettings;
 }
 
 export function CashierPage({
@@ -35,6 +37,7 @@ export function CashierPage({
   onAddCustomer,
   cartTotal,
   cartTotalDiscount,
+  settings,
 }: CashierPageProps) {
   const [search, setSearch] = useState('');
   const [lastTransaction, setLastTransaction] = useState<Transaction | null>(null);
@@ -108,6 +111,7 @@ export function CashierPage({
         open={showReceipt}
         onClose={() => setShowReceipt(false)}
         autoPrint={true}
+        settings={settings}
       />
     </div>
   );
