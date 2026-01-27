@@ -3,7 +3,7 @@ import { StoreSettings, ThemeTone } from '@/types';
 import { api } from '@/lib/api';
 
 const DEFAULT_SETTINGS: StoreSettings = {
-  storeName: 'Toko Mudah',
+  storeName: 'Kasier',
   storeAddress: '',
   storePhone: '',
   themeTone: 'green',

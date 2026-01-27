@@ -591,7 +591,7 @@ export default {
              VALUES (?, ?, ?, ?, ?, ?, ?)`
           ).bind(
             userId,
-            data.store_name || 'Toko Mudah',
+            data.store_name || 'Kasier',
             toNull(data.store_address),
             toNull(data.store_phone),
             data.theme_tone || 'green',

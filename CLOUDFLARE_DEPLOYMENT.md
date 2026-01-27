@@ -1,6 +1,6 @@
 # Cloudflare Workers + D1 Deployment Guide
 
-This guide will help you deploy Toko Mudah to Cloudflare Workers with Cloudflare D1 database.
+This guide will help you deploy Kasier to Cloudflare Workers with Cloudflare D1 database.
 
 ## Prerequisites
 

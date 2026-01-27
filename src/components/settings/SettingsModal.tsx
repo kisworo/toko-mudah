@@ -48,7 +48,7 @@ export function SettingsModal({ open, onClose, settings, onUpdateSettings }: Set
     setIsSaving(true);
     try {
       await onUpdateSettings({
-        storeName: storeName.trim() || 'TokoKu',
+        storeName: storeName.trim() || 'Kasier',
         storeAddress: storeAddress.trim(),
         storePhone: storePhone.trim(),
       });

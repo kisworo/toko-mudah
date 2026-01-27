@@ -42,15 +42,11 @@ export function HomePage() {
           Platform Kasir #1 untuk UMKM Indonesia
         </Badge>
 
-        <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-6 animate-slide-in">
-          <span className="bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent">
-            Kasir Toko
-          </span>
-          <br />
-          <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-            Mudah
-          </span>
-        </h1>
+<h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-6 animate-slide-in">
+      <span className="bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent">
+        Kasier
+      </span>
+    </h1>
 
         <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mb-10 animate-fade-in leading-relaxed">
           Kelola usaha Anda dengan mudah. Transaksi cepat, stok terkontrol,
@@ -300,7 +296,7 @@ export function HomePage() {
               {
                 name: "Budi Santoso",
                 role: "Pemilik Warung Berkah",
-                content: "Sejak pakai Toko Mudah, stok lebih terkontrol dan omset naik 30%. Sangat recommended!",
+                content: "Sejak pakai Kasier, stok lebih terkontrol dan omset naik 30%. Sangat recommended!",
                 rating: 5,
               },
               {
@@ -344,9 +340,9 @@ export function HomePage() {
               <h2 className="text-4xl md:text-5xl font-bold mb-6">
                 Siap Mengembangkan Usaha Anda?
               </h2>
-              <p className="text-xl opacity-90 mb-10 max-w-xl mx-auto">
-                Bergabung dengan ribuan pebisnis yang sudah merasakan kemudahan mengelola usaha dengan Toko Mudah.
-              </p>
+<p className="text-xl opacity-90 mb-10 max-w-xl mx-auto">
+      Bergabung dengan ribuan pebisnis yang sudah merasakan kemudahan mengelola usaha dengan Kasier.
+    </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link to="/register">
                   <Button size="lg" className="h-14 px-8 text-lg font-bold bg-white text-primary hover:bg-white/90 shadow-xl">
@@ -365,9 +361,9 @@ export function HomePage() {
         <div className="container mx-auto max-w-6xl">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div>
-              <h3 className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
-                Kasir Toko Mudah
-              </h3>
+<h3 className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
+          Kasier
+        </h3>
               <p className="text-muted-foreground mt-1">Solusi kasir modern untuk UMKM Indonesia</p>
             </div>
             <div className="flex gap-6 text-sm text-muted-foreground">
@@ -377,7 +373,7 @@ export function HomePage() {
             </div>
           </div>
           <div className="mt-8 pt-8 border-t text-center text-sm text-muted-foreground">
-            <p>© 2025 Kasir Toko Mudah. Semua hak dilindungi.</p>
+            <p>© 2025 Kasier. Semua hak dilindungi.</p>
           </div>
         </div>
       </footer>

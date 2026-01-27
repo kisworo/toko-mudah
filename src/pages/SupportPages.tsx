@@ -56,7 +56,7 @@ export function AboutPage() {
               </h2>
               <div className="prose dark:prose-invert max-w-none text-muted-foreground space-y-4">
                 <p>
-                  Toko Mudah lahir dari keinginan sederhana: memberikan akses teknologi kasir (Point of Sale) 
+                  Kasier lahir dari keinginan sederhana: memberikan akses teknologi kasir (Point of Sale) 
                   yang canggih namun mudah digunakan bagi jutaan pelaku usaha mikro, kecil, dan menengah di Indonesia.
                 </p>
                 <p>

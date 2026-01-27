@@ -3,7 +3,7 @@ import { StoreSettings, ThemeTone } from '@/types';
 import { api } from '@/lib/api';
 
 const DEFAULT_SETTINGS: StoreSettings = {
-  storeName: 'TokoKu',
+  storeName: 'Kasier',
   storeAddress: '',
   storePhone: '',
   themeTone: 'green',

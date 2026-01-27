@@ -39,9 +39,9 @@ export function AppLayout({ children, settings, onOpenSettings, isAuthenticated 
     const userStr = localStorage.getItem('user');
     if (userStr) {
       const user = JSON.parse(userStr);
-      return user.full_name || 'TokoKu';
+      return user.full_name || 'Kasier';
     }
-    return 'TokoKu';
+    return 'Kasier';
   };
 
   const handleLogout = () => {
