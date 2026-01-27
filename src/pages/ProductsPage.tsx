@@ -205,22 +205,22 @@ export function ProductsPage({
                       Stok: {product.stock}
                     </p>
                   </div>
-                  <div className="flex shrink-0">
+                  <div className="flex flex-col sm:flex-row shrink-0 gap-1 sm:gap-0">
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-20 w-20 rounded-r-none [&_svg]:size-8"
+                      className="h-8 w-8 rounded-md sm:h-20 sm:w-14 sm:rounded-r-none"
                       onClick={() => handleEdit(product)}
                     >
-                      <Pencil className="h-8 w-8" />
+                      <Pencil className="h-4 w-4 sm:h-6 sm:w-6" />
                     </Button>
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-20 w-20 rounded-l-none text-destructive hover:text-destructive border-l-0 [&_svg]:size-8"
+                      className="h-8 w-8 rounded-md text-destructive hover:text-destructive sm:h-20 sm:w-14 sm:rounded-l-none sm:border-l-0"
                       onClick={() => setDeletingProduct(product)}
                     >
-                      <Trash2 className="h-8 w-8" />
+                      <Trash2 className="h-4 w-4 sm:h-6 sm:w-6" />
                     </Button>
                   </div>
                 </div>

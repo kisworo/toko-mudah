@@ -7,7 +7,8 @@ import {
   Menu,
   X,
   Store,
-  Settings
+  Settings,
+  LogOut
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -107,11 +108,12 @@ export function AppLayout({ children, settings, onOpenSettings, isAuthenticated 
                 </Button>
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="icon"
                   className="ml-2 text-destructive hover:text-destructive hover:bg-destructive/10"
                   onClick={handleLogout}
+                  title="Keluar"
                 >
-                  Keluar
+                  <LogOut className="h-4 w-4" />
                 </Button>
               </>
             ) : (
@@ -172,6 +174,7 @@ export function AppLayout({ children, settings, onOpenSettings, isAuthenticated 
                   className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
                   onClick={handleLogout}
                 >
+                  <LogOut className="h-4 w-4" />
                   Keluar
                 </Button>
               </>
