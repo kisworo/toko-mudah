@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { StoreSettings, ThemeTone } from '@/types';
 import {
   Dialog,
@@ -12,12 +12,13 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Store, Palette, ImageIcon, Upload, Trash2, Camera, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface SettingsModalProps {
   open: boolean;
   onClose: () => void;
   settings: StoreSettings;
-  onUpdateSettings: (updates: Partial<StoreSettings>) => void;
+  onUpdateSettings: (updates: Partial<StoreSettings>) => Promise<void>;
 }
 
 const THEME_OPTIONS: { value: ThemeTone; label: string; color: string }[] = [
@@ -34,17 +35,38 @@ export function SettingsModal({ open, onClose, settings, onUpdateSettings }: Set
   const [storePhone, setStorePhone] = useState(settings.storePhone || '');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSaveStore = () => {
-    onUpdateSettings({
-      storeName: storeName.trim() || 'TokoKu',
-      storeAddress: storeAddress.trim(),
-      storePhone: storePhone.trim(),
-    });
+  // Sync local state with settings prop when it changes
+  useEffect(() => {
+    setStoreName(settings.storeName);
+    setStoreAddress(settings.storeAddress || '');
+    setStorePhone(settings.storePhone || '');
+  }, [settings]);
+
+  const handleSaveStore = async () => {
+    setIsSaving(true);
+    try {
+      await onUpdateSettings({
+        storeName: storeName.trim() || 'TokoKu',
+        storeAddress: storeAddress.trim(),
+        storePhone: storePhone.trim(),
+      });
+      toast.success('Informasi toko berhasil disimpan');
+    } catch (error) {
+      toast.error('Gagal menyimpan informasi toko');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleThemeChange = (tone: ThemeTone) => {
-    onUpdateSettings({ themeTone: tone });
+  const handleThemeChange = async (tone: ThemeTone) => {
+    try {
+      await onUpdateSettings({ themeTone: tone });
+      toast.success(`Tema diubah menjadi ${THEME_OPTIONS.find(t => t.value === tone)?.label}`);
+    } catch (error) {
+      toast.error('Gagal mengubah tema');
+    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,7 +76,7 @@ export function SettingsModal({ open, onClose, settings, onUpdateSettings }: Set
     const reader = new FileReader();
     reader.onload = (event) => {
       const img = new Image();
-      img.onload = () => {
+      img.onload = async () => {
         // Resize for performance
         const canvas = document.createElement('canvas');
         const maxSize = 1920;
@@ -76,7 +98,13 @@ export function SettingsModal({ open, onClose, settings, onUpdateSettings }: Set
         ctx?.drawImage(img, 0, 0, width, height);
         
         const resizedImage = canvas.toDataURL('image/jpeg', 0.8);
-        onUpdateSettings({ backgroundImage: resizedImage });
+        
+        try {
+          await onUpdateSettings({ backgroundImage: resizedImage });
+          toast.success('Background berhasil diupload');
+        } catch (error) {
+          toast.error('Gagal mengupload background');
+        }
       };
       img.src = event.target?.result as string;
     };
@@ -86,8 +114,13 @@ export function SettingsModal({ open, onClose, settings, onUpdateSettings }: Set
     e.target.value = '';
   };
 
-  const handleRemoveBackground = () => {
-    onUpdateSettings({ backgroundImage: undefined });
+  const handleRemoveBackground = async () => {
+    try {
+      await onUpdateSettings({ backgroundImage: undefined });
+      toast.success('Background berhasil dihapus');
+    } catch (error) {
+      toast.error('Gagal menghapus background');
+    }
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,7 +130,7 @@ export function SettingsModal({ open, onClose, settings, onUpdateSettings }: Set
     const reader = new FileReader();
     reader.onload = (event) => {
       const img = new Image();
-      img.onload = () => {
+      img.onload = async () => {
         // Resize logo to max 256x256 for performance
         const canvas = document.createElement('canvas');
         const maxSize = 256;
@@ -119,7 +152,13 @@ export function SettingsModal({ open, onClose, settings, onUpdateSettings }: Set
         ctx?.drawImage(img, 0, 0, width, height);
 
         const resizedImage = canvas.toDataURL('image/png', 0.9);
-        onUpdateSettings({ storeLogo: resizedImage });
+        
+        try {
+          await onUpdateSettings({ storeLogo: resizedImage });
+          toast.success('Logo toko berhasil diupload');
+        } catch (error) {
+          toast.error('Gagal mengupload logo toko');
+        }
       };
       img.src = event.target?.result as string;
     };
@@ -129,8 +168,13 @@ export function SettingsModal({ open, onClose, settings, onUpdateSettings }: Set
     e.target.value = '';
   };
 
-  const handleRemoveLogo = () => {
-    onUpdateSettings({ storeLogo: undefined });
+  const handleRemoveLogo = async () => {
+    try {
+      await onUpdateSettings({ storeLogo: undefined });
+      toast.success('Logo berhasil dihapus');
+    } catch (error) {
+      toast.error('Gagal menghapus logo');
+    }
   };
 
   return (

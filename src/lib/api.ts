@@ -52,6 +52,7 @@ export interface StoreSettings {
   store_phone?: string;
   theme_tone: 'green' | 'blue' | 'purple' | 'orange' | 'rose';
   background_image?: string;
+  store_logo?: string;
 }
 
 export interface User {

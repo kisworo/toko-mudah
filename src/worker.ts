@@ -428,12 +428,12 @@ export default {
 
         // Debug log
         console.log('PUT /api/settings received:', JSON.stringify({
-          storeName: data.storeName,
+          store_name: data.store_name,
           store_address: data.store_address,
           store_phone: data.store_phone,
-          themeTone: data.themeTone,
-          background_image: data.background_image?.substring(0, 30),
-          store_logo: data.store_logo?.substring(0, 30),
+          theme_tone: data.theme_tone,
+          background_image: data.background_image ? 'Present' : 'None',
+          store_logo: data.store_logo ? 'Present' : 'None',
         }));
 
         // Helper to convert undefined to null
@@ -449,9 +449,9 @@ export default {
           const updateFields: string[] = [];
           const updateValues: any[] = [];
 
-          if (data.storeName !== undefined) {
+          if (data.store_name !== undefined) {
             updateFields.push('store_name = ?');
-            updateValues.push(data.storeName);
+            updateValues.push(data.store_name);
           }
           if (data.store_address !== undefined) {
             updateFields.push('store_address = ?');
@@ -461,9 +461,9 @@ export default {
             updateFields.push('store_phone = ?');
             updateValues.push(toNull(data.store_phone));
           }
-          if (data.themeTone !== undefined) {
+          if (data.theme_tone !== undefined) {
             updateFields.push('theme_tone = ?');
-            updateValues.push(data.themeTone);
+            updateValues.push(data.theme_tone);
           }
           if (data.background_image !== undefined) {
             updateFields.push('background_image = ?');
@@ -494,12 +494,12 @@ export default {
              VALUES (?, ?, ?, ?, ?, ?, ?)`
           ).bind(
             userId,
-            data.storeName,
-            toNull(data.storeAddress),
-            toNull(data.storePhone),
-            data.themeTone,
-            toNull(data.backgroundImage),
-            toNull(data.storeLogo)
+            data.store_name || 'Toko Mudah',
+            toNull(data.store_address),
+            toNull(data.store_phone),
+            data.theme_tone || 'green',
+            toNull(data.background_image),
+            toNull(data.store_logo)
           ).run();
         }
 

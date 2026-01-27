@@ -126,6 +126,7 @@ export function useStoreSettings() {
     } catch (error) {
       console.error('Error updating settings:', error);
       // Revert on error? For now, we just log it.
+      throw error; // Re-throw error so UI can handle it
     }
   };
 

@@ -1,7 +1,7 @@
 var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
-// .wrangler/tmp/bundle-pqnpb7/checked-fetch.js
+// .wrangler/tmp/bundle-O7zesk/checked-fetch.js
 var urls = /* @__PURE__ */ new Set();
 function checkURL(request, init) {
   const url = request instanceof URL ? request : new URL(
@@ -659,12 +659,12 @@ var worker_default = {
         }
         const data = await request.json();
         console.log("PUT /api/settings received:", JSON.stringify({
-          storeName: data.storeName,
+          store_name: data.store_name,
           store_address: data.store_address,
           store_phone: data.store_phone,
-          themeTone: data.themeTone,
-          background_image: data.background_image?.substring(0, 30),
-          store_logo: data.store_logo?.substring(0, 30)
+          theme_tone: data.theme_tone,
+          background_image: data.background_image ? "Present" : "None",
+          store_logo: data.store_logo ? "Present" : "None"
         }));
         const toNull = /* @__PURE__ */ __name((val) => val === void 0 ? null : val, "toNull");
         const existing = await env.DB.prepare(
@@ -673,9 +673,9 @@ var worker_default = {
         if (existing) {
           const updateFields = [];
           const updateValues = [];
-          if (data.storeName !== void 0) {
+          if (data.store_name !== void 0) {
             updateFields.push("store_name = ?");
-            updateValues.push(data.storeName);
+            updateValues.push(data.store_name);
           }
           if (data.store_address !== void 0) {
             updateFields.push("store_address = ?");
@@ -685,9 +685,9 @@ var worker_default = {
             updateFields.push("store_phone = ?");
             updateValues.push(toNull(data.store_phone));
           }
-          if (data.themeTone !== void 0) {
+          if (data.theme_tone !== void 0) {
             updateFields.push("theme_tone = ?");
-            updateValues.push(data.themeTone);
+            updateValues.push(data.theme_tone);
           }
           if (data.background_image !== void 0) {
             updateFields.push("background_image = ?");
@@ -713,12 +713,12 @@ var worker_default = {
              VALUES (?, ?, ?, ?, ?, ?, ?)`
           ).bind(
             userId,
-            data.storeName,
-            toNull(data.storeAddress),
-            toNull(data.storePhone),
-            data.themeTone,
-            toNull(data.backgroundImage),
-            toNull(data.storeLogo)
+            data.store_name || "Toko Mudah",
+            toNull(data.store_address),
+            toNull(data.store_phone),
+            data.theme_tone || "green",
+            toNull(data.background_image),
+            toNull(data.store_logo)
           ).run();
         }
         const settings = await env.DB.prepare(
@@ -783,7 +783,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-pqnpb7/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-O7zesk/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -815,7 +815,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-pqnpb7/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-O7zesk/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;
