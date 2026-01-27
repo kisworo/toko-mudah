@@ -10,15 +10,16 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { 
-  Search, 
-  Receipt, 
+import {
+  Search,
+  Receipt,
   Calendar as CalendarIcon,
   User,
   Printer,
   TrendingUp,
   DollarSign,
-  ChevronDown
+  ChevronDown,
+  Package
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -103,6 +104,32 @@ export function TransactionsPage({ transactions, settings }: TransactionsPagePro
   const totalRevenue = filteredTransactions.reduce((sum, tx) => sum + tx.total, 0);
   const totalProfit = filteredTransactions.reduce((sum, tx) => sum + (tx.total - tx.totalDiscount), 0);
   const totalTransactions = filteredTransactions.length;
+
+  // Calculate product sales data - group by product name
+  const productSalesData = useMemo(() => {
+    const productMap = new Map<string, { name: string; quantity: number; revenue: number }>();
+    
+    filteredTransactions.forEach(tx => {
+      tx.items.forEach(item => {
+        const productName = item.name.trim();
+        const existing = productMap.get(productName);
+        if (existing) {
+          existing.quantity += item.quantity;
+          existing.revenue += item.price * item.quantity;
+        } else {
+          productMap.set(productName, {
+            name: productName,
+            quantity: item.quantity,
+            revenue: item.price * item.quantity
+          });
+        }
+      });
+    });
+    
+    return Array.from(productMap.values())
+      .sort((a, b) => b.quantity - a.quantity) // Sort by quantity sold
+      .slice(0, 10); // Top 10 products
+  }, [filteredTransactions]);
 
   return (
     <div className="space-y-4">
@@ -201,42 +228,153 @@ export function TransactionsPage({ transactions, settings }: TransactionsPagePro
           </ChartContainer>
         </Card>
 
-        {/* Profit Chart */}
-        <Card className="p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="h-5 w-5 text-green-600" />
-            <h3 className="font-semibold">Grafik Laba Harian</h3>
-          </div>
-          <ChartContainer config={{ profit: { label: 'Laba', color: 'hsl(142, 76%, 36%)' } }} className="h-[200px]">
+{/* Profit Chart */}
+      <Card className="p-4">
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingUp className="h-5 w-5 text-green-600" />
+          <h3 className="font-semibold">Grafik Laba Harian</h3>
+        </div>
+        <ChartContainer config={{ profit: { label: 'Laba', color: 'hsl(142, 76%, 36%)' } }} className="h-[200px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData}>
+              <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-muted" />
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 12 }}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis
+                tick={{ fontSize: 12 }}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(value) => formatPrice(value).split(',')[0]}
+              />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Line
+                type="monotone"
+                dataKey="profit"
+                stroke="var(--color-profit)"
+                strokeWidth={2}
+                dot={{ fill: 'var(--color-profit)', strokeWidth: 0, r: 4 }}
+                activeDot={{ r: 6 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </ChartContainer>
+      </Card>
+
+      {/* Product Sales Chart */}
+      <Card className="p-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Package className="h-5 w-5 text-purple-600" />
+          <h3 className="font-semibold">Produk Terlaris</h3>
+          <span className="text-xs text-muted-foreground ml-auto">
+            {productSalesData.length > 0 ? `Top ${productSalesData.length} produk` : 'Belum ada data'}
+          </span>
+        </div>
+        {productSalesData.length > 0 ? (
+          <ChartContainer 
+            config={{ 
+              quantity: { label: 'Jumlah Terjual', color: 'hsl(var(--primary))' }
+            }} 
+            className="h-[300px]"
+          >
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
+              <BarChart data={productSalesData} margin={{ left: 10, right: 10, bottom: 60 }}>
                 <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis 
-                  dataKey="date" 
-                  tick={{ fontSize: 12 }}
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 10 }}
                   tickLine={false}
                   axisLine={false}
+                  height={60}
+                  interval={0}
+                  angle={-45}
+                  textAnchor="end"
                 />
-                <YAxis 
-                  tick={{ fontSize: 12 }}
+                <YAxis
+                  tick={{ fontSize: 11 }}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(value) => formatPrice(value).split(',')[0]}
+                  allowDecimals={false}
                 />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Line 
-                  type="monotone" 
-                  dataKey="profit" 
-                  stroke="var(--color-profit)" 
-                  strokeWidth={2}
-                  dot={{ fill: 'var(--color-profit)', strokeWidth: 0, r: 4 }}
-                  activeDot={{ r: 6 }}
+                <ChartTooltip 
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="bg-background border rounded-lg p-3 shadow-lg">
+                          <p className="font-semibold text-sm mb-1">{data.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Terjual: <span className="font-medium text-foreground">{data.quantity} pcs</span>
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Total: <span className="font-medium text-primary">{formatPrice(data.revenue)}</span>
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
                 />
-              </LineChart>
+                <Bar dataKey="quantity" radius={[4, 4, 0, 0]} fill="var(--color-quantity)" />
+              </BarChart>
             </ResponsiveContainer>
           </ChartContainer>
+        ) : (
+          <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+            <div className="text-center">
+              <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">Belum ada penjualan produk</p>
+              <p className="text-xs">Data akan muncul setelah ada transaksi</p>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* Product Sales Summary Table */}
+      {productSalesData.length > 0 && (
+        <Card className="p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Package className="h-5 w-5 text-primary" />
+            <h3 className="font-semibold">Detail Penjualan Produk</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 px-2 text-sm font-medium text-muted-foreground">Produk</th>
+                  <th className="text-right py-2 px-2 text-sm font-medium text-muted-foreground">Jumlah</th>
+                  <th className="text-right py-2 px-2 text-sm font-medium text-muted-foreground">Total Penjualan</th>
+                </tr>
+              </thead>
+              <tbody>
+                {productSalesData.map((product, index) => (
+                  <tr key={index} className="border-b last:border-0 hover:bg-muted/50">
+                    <td className="py-3 px-2">
+                      <div className="flex items-center gap-2">
+                        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">
+                          {index + 1}
+                        </span>
+                        <span className="font-medium text-sm">{product.name}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-2 text-right">
+                      <span className="text-sm font-semibold">{product.quantity}</span>
+                      <span className="text-xs text-muted-foreground ml-1">pcs</span>
+                    </td>
+                    <td className="py-3 px-2 text-right">
+                      <span className="text-sm font-semibold text-primary">{formatPrice(product.revenue)}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Card>
-      </div>
+      )}
+    </div>
 
       {/* Transactions List */}
       <div className="space-y-3">
