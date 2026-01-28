@@ -188,6 +188,26 @@ export function useStore() {
     }
   }, []);
 
+  const updateCustomer = useCallback(async (id: string, updates: Partial<Customer>) => {
+    try {
+      const result = await api.updateCustomer(id, updates);
+      setCustomers(prev => prev.map(c => c.id === id ? convertApiCustomer(result) : c));
+    } catch (error: any) {
+      console.error('Error updating customer:', error.message);
+      throw error;
+    }
+  }, []);
+
+  const deleteCustomer = useCallback(async (id: string) => {
+    try {
+      await api.deleteCustomer(id);
+      setCustomers(prev => prev.filter(c => c.id !== id));
+    } catch (error: any) {
+      console.error('Error deleting customer:', error.message);
+      throw error;
+    }
+  }, []);
+
   const findCustomers = useCallback(async (query: string) => {
     try {
       const results = await api.getCustomers(query);
@@ -297,6 +317,8 @@ export function useStore() {
     updateCategory,
     deleteCategory,
     addCustomer,
+    updateCustomer,
+    deleteCustomer,
     findCustomers,
     addToCart,
     updateCartQuantity,

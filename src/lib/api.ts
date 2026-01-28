@@ -197,6 +197,19 @@ class ApiClient {
     });
   }
 
+  updateCustomer(id: string, data: Partial<Customer>): Promise<Customer> {
+    return this.request<Customer>(`/api/customers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  deleteCustomer(id: string): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/api/customers/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Transactions
   getTransactions(startDate?: string, endDate?: string): Promise<Transaction[]> {
     const params = new URLSearchParams();

@@ -16,7 +16,6 @@ import {
   Calendar as CalendarIcon,
   User,
   Printer,
-  TrendingUp,
   DollarSign,
   ChevronDown,
   Package
@@ -27,8 +26,6 @@ import {
   XAxis, 
   YAxis, 
   CartesianGrid, 
-  LineChart,
-  Line,
   ResponsiveContainer 
 } from 'recharts';
 
@@ -88,14 +85,11 @@ export function TransactionsPage({ transactions, settings }: TransactionsPagePro
       });
       
       const dailySales = dayTransactions.reduce((sum, tx) => sum + tx.total, 0);
-      const dailyDiscounts = dayTransactions.reduce((sum, tx) => sum + tx.totalDiscount, 0);
-      const dailyProfit = dailySales - dailyDiscounts;
       
       return {
         date: format(day, 'dd MMM', { locale: id }),
         fullDate: day,
         sales: dailySales,
-        profit: dailyProfit,
         transactions: dayTransactions.length
       };
     });
@@ -103,7 +97,6 @@ export function TransactionsPage({ transactions, settings }: TransactionsPagePro
 
   // Calculate totals
   const totalRevenue = filteredTransactions.reduce((sum, tx) => sum + tx.total, 0);
-  const totalProfit = filteredTransactions.reduce((sum, tx) => sum + (tx.total - tx.totalDiscount), 0);
   const totalTransactions = filteredTransactions.length;
 
   // Calculate product sales data - group by product name
@@ -143,16 +136,11 @@ export function TransactionsPage({ transactions, settings }: TransactionsPagePro
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3">
         <Card className="p-4">
-          <p className="text-sm text-muted-foreground">Penjualan</p>
-          <p className="text-xl font-bold text-primary">{formatPrice(totalRevenue)}</p>
+          <p className="text-sm text-muted-foreground">Total Penjualan</p>
+          <p className="text-2xl font-bold text-primary">{formatPrice(totalRevenue)}</p>
           <p className="text-xs text-muted-foreground">{totalTransactions} transaksi</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-sm text-muted-foreground">Laba</p>
-          <p className="text-xl font-bold text-green-600">{formatPrice(totalProfit)}</p>
-          <p className="text-xs text-muted-foreground">{formatPrice(totalRevenue - totalProfit)} diskon</p>
         </Card>
       </div>
 
@@ -245,41 +233,7 @@ export function TransactionsPage({ transactions, settings }: TransactionsPagePro
           </ChartContainer>
         </Card>
 
-{/* Profit Chart */}
-      <Card className="p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <TrendingUp className="h-5 w-5 text-green-600" />
-          <h3 className="font-semibold">Grafik Laba Harian</h3>
-        </div>
-        <ChartContainer config={{ profit: { label: 'Laba', color: 'hsl(142, 76%, 36%)' } }} className="h-[200px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis
-                dataKey="date"
-                tick={{ fontSize: 12 }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 12 }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(value) => formatPrice(value).split(',')[0]}
-              />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Line
-                type="monotone"
-                dataKey="profit"
-                stroke="var(--color-profit)"
-                strokeWidth={2}
-                dot={{ fill: 'var(--color-profit)', strokeWidth: 0, r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartContainer>
-      </Card>
+
 
       {/* Product Sales Chart */}
       <Card className="p-4">

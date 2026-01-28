@@ -13,6 +13,7 @@ import { AboutPage, HelpPage, ContactPage } from "@/pages/SupportPages";
 import { Navigate } from "react-router-dom";
 import { ProductsPage } from "@/pages/ProductsPage";
 import { TransactionsPage } from "@/pages/TransactionsPage";
+import { CustomersPage } from "@/pages/CustomersPage";
 import { SettingsModal } from "@/components/settings/SettingsModal";
 import { useStore } from "@/hooks/useStore";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
@@ -47,6 +48,8 @@ function AppContent() {
     addCategory,
     deleteCategory,
     addCustomer,
+    updateCustomer,
+    deleteCustomer,
     findCustomers,
     addToCart,
     updateCartQuantity,
@@ -114,6 +117,20 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <TransactionsPage transactions={transactions} settings={settings} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customers"
+          element={
+            <ProtectedRoute>
+              <CustomersPage
+                customers={customers}
+                transactions={transactions}
+                onAddCustomer={addCustomer}
+                onUpdateCustomer={updateCustomer}
+                onDeleteCustomer={deleteCustomer}
+              />
             </ProtectedRoute>
           }
         />

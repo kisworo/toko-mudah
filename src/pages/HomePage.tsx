@@ -42,11 +42,12 @@ export function HomePage() {
           Platform Kasir #1 untuk UMKM Indonesia
         </Badge>
 
-<h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-6 animate-slide-in">
-      <span className="bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent">
+<div className="flex items-center justify-center gap-4 mb-6 animate-slide-in">
+      <img src="/kasier_icon.png" alt="Kasier" className="w-16 h-16 md:w-20 md:h-20" />
+      <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent">
         Kasier
-      </span>
-    </h1>
+      </h1>
+    </div>
 
         <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mb-10 animate-fade-in leading-relaxed">
           Kelola usaha Anda dengan mudah. Transaksi cepat, stok terkontrol,

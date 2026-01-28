@@ -4,6 +4,7 @@ import {
   ShoppingCart,
   Package,
   Receipt,
+  Users,
   Menu,
   X,
   Store,
@@ -26,6 +27,7 @@ const navItems = [
   { path: '/cashier', label: 'Kasir', icon: ShoppingCart },
   { path: '/products', label: 'Produk', icon: Package },
   { path: '/transactions', label: 'Riwayat', icon: Receipt },
+  { path: '/customers', label: 'Pelanggan', icon: Users },
 ];
 
 export function AppLayout({ children, settings, onOpenSettings, isAuthenticated = false }: AppLayoutProps) {
@@ -77,8 +79,12 @@ export function AppLayout({ children, settings, onOpenSettings, isAuthenticated 
                 />
               </div>
             ) : (
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                <Store className="h-5 w-5 text-primary-foreground" />
+              <div className="h-8 w-8 rounded-lg overflow-hidden bg-primary flex items-center justify-center">
+                <img
+                  src="/kasier_icon.png"
+                  alt="Kasier"
+                  className="h-full w-full object-contain"
+                />
               </div>
             )}
             <span className="text-lg font-semibold">{getStoreName()}</span>
