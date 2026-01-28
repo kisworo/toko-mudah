@@ -46,14 +46,14 @@ export function ProductForm({ product, categories, open, onClose, onSubmit }: Pr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name.trim() || !price || !stock || !category) return;
+    if (!name.trim() || !price) return;
 
     try {
       await onSubmit({
         name: name.trim(),
         price: parseInt(price),
-        stock: parseInt(stock),
-        category,
+        stock: stock ? parseInt(stock) : 0,
+        category: category || 'Uncategorized',
         image,
         discountType: discountType || undefined,
         discountValue: discountValue ? parseInt(discountValue) : undefined,
@@ -127,16 +127,15 @@ export function ProductForm({ product, categories, open, onClose, onSubmit }: Pr
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="stock">Stok</Label>
+              <Label htmlFor="stock">Stok (Opsional)</Label>
               <div className="relative">
                 <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="stock"
                   type="number"
-                  placeholder="100"
+                  placeholder="0"
                   value={stock}
                   onChange={(e) => setStock(e.target.value)}
-                  required
                   min="0"
                   className="pl-10 h-11"
                 />
@@ -146,14 +145,14 @@ export function ProductForm({ product, categories, open, onClose, onSubmit }: Pr
 
           {/* Category Selection */}
           <div className="space-y-2">
-            <Label>Kategori</Label>
+            <Label>Kategori (Opsional)</Label>
             {categories.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {categories.map(cat => (
                   <button
                     key={cat.id}
                     type="button"
-                    onClick={() => setCategory(cat.name)}
+                    onClick={() => setCategory(category === cat.name ? '' : cat.name)}
                     className={`
                       relative px-4 py-2 rounded-full border-2 transition-all text-sm font-medium
                       ${category === cat.name 
@@ -176,7 +175,7 @@ export function ProductForm({ product, categories, open, onClose, onSubmit }: Pr
               </div>
             ) : (
               <p className="text-sm text-muted-foreground py-2">
-                Belum ada kategori. Tambahkan kategori terlebih dahulu.
+                Belum ada kategori. Produk akan disimpan tanpa kategori.
               </p>
             )}
           </div>
@@ -257,7 +256,7 @@ export function ProductForm({ product, categories, open, onClose, onSubmit }: Pr
             <Button 
               type="submit" 
               className="flex-1"
-              disabled={!name.trim() || !price || !stock || !category}
+              disabled={!name.trim() || !price}
             >
               {product ? 'Simpan Perubahan' : 'Tambah Produk'}
             </Button>

@@ -42,9 +42,24 @@ export function useStoreSettingsApi() {
   const [settings, setSettings] = useState<StoreSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(false);
 
-  // Fetch settings from API
+  // Fetch settings from API - only if authenticated
   useEffect(() => {
     const fetchSettings = async () => {
+      // Check if user is authenticated before fetching
+      if (!api.isAuthenticated()) {
+        setLoading(false);
+        // Fallback to localStorage if not authenticated
+        const saved = localStorage.getItem('store-settings');
+        if (saved) {
+          try {
+            setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(saved) });
+          } catch {
+            setSettings(DEFAULT_SETTINGS);
+          }
+        }
+        return;
+      }
+
       setLoading(true);
       try {
         const data = await api.getSettings();

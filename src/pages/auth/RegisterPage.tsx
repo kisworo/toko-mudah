@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Store, Eye, EyeOff } from "lucide-react";
+import { Store, Eye, EyeOff, RefreshCw } from "lucide-react";
 import { api } from "@/lib/api";
 
 export function RegisterPage() {
@@ -14,22 +14,52 @@ export function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [captchaCode, setCaptchaCode] = useState("");
+  const [captchaInput, setCaptchaInput] = useState("");
+  const [captchaError, setCaptchaError] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Generate random CAPTCHA code
+  const generateCaptcha = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let code = "";
+    for (let i = 0; i < 4; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setCaptchaCode(code);
+    setCaptchaInput("");
+    setCaptchaError("");
+  };
+
+  // Initialize CAPTCHA on mount
+  useEffect(() => {
+    generateCaptcha();
+  }, []);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setCaptchaError("");
+
+    // Validate CAPTCHA
+    if (captchaInput.toUpperCase() !== captchaCode) {
+      setCaptchaError("Kode CAPTCHA tidak cocok. Silakan coba lagi.");
+      generateCaptcha();
+      return;
+    }
 
     // Validate passwords match
     if (password !== confirmPassword) {
       setError("Password tidak cocok");
+      generateCaptcha();
       return;
     }
 
     // Validate password length
     if (password.length < 6) {
       setError("Password minimal 6 karakter");
+      generateCaptcha();
       return;
     }
 
@@ -50,6 +80,7 @@ export function RegisterPage() {
       window.location.href = "/cashier";
     } catch (err: any) {
       setError(err.message || "Gagal mendaftar. Email mungkin sudah digunakan.");
+      generateCaptcha();
     } finally {
       setIsLoading(false);
     }
@@ -142,6 +173,66 @@ export function RegisterPage() {
                   {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+            </div>
+
+            {/* CAPTCHA */}
+            <div className="space-y-2">
+              <Label htmlFor="captcha">Verifikasi Keamanan</Label>
+              <div className="flex items-center gap-2">
+                {/* CAPTCHA Image */}
+                <div 
+                  className="bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 border rounded-md px-4 py-2 select-none"
+                  style={{
+                    fontFamily: 'monospace',
+                    fontSize: '20px',
+                    fontWeight: 'bold',
+                    letterSpacing: '4px',
+                    textDecoration: 'line-through',
+                    textDecorationColor: '#ef4444',
+                    textDecorationThickness: '2px',
+                    color: '#374151',
+                    textShadow: '2px 2px 4px rgba(0,0,0,0.1)',
+                    minWidth: '120px',
+                    textAlign: 'center',
+                    userSelect: 'none'
+                  }}
+                >
+                  {captchaCode.split('').map((char, i) => (
+                    <span 
+                      key={i} 
+                      style={{
+                        display: 'inline-block',
+                        transform: `rotate(${Math.random() * 20 - 10}deg)`,
+                        color: ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'][i % 5]
+                      }}
+                    >
+                      {char}
+                    </span>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={generateCaptcha}
+                  className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                  title="Generate CAPTCHA baru"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </button>
+              </div>
+              <Input
+                id="captcha"
+                type="text"
+                placeholder="Masukkan kode di atas"
+                value={captchaInput}
+                onChange={(e) => setCaptchaInput(e.target.value)}
+                required
+                disabled={isLoading}
+                maxLength={4}
+                className="uppercase"
+              />
+              {captchaError && (
+                <p className="text-sm text-red-600">{captchaError}</p>
+              )}
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">

@@ -69,9 +69,15 @@ export function useStore() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Fetch initial data
+  // Fetch initial data - only if authenticated
   useEffect(() => {
     const fetchData = async () => {
+      // Check if user is authenticated before fetching
+      if (!api.isAuthenticated()) {
+        setLoading(false);
+        return;
+      }
+      
       setLoading(true);
       try {
         const [productsData, categoriesData, customersData, transactionsData] = await Promise.all([

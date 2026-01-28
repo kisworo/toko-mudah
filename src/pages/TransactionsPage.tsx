@@ -46,6 +46,7 @@ export function TransactionsPage({ transactions, settings }: TransactionsPagePro
     from: subDays(new Date(), 30),
     to: new Date()
   });
+  const [isSelectingRange, setIsSelectingRange] = useState(false);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -156,7 +157,7 @@ export function TransactionsPage({ transactions, settings }: TransactionsPagePro
       </div>
 
       {/* Date Range & Search */}
-      <div className="flex gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -168,10 +169,10 @@ export function TransactionsPage({ transactions, settings }: TransactionsPagePro
         </div>
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="gap-2 min-w-[200px] justify-start">
+            <Button variant="outline" className="gap-2 min-w-[240px] justify-start">
               <CalendarIcon className="h-4 w-4" />
               <span className="flex-1 text-left">
-                {dateRange.from ? format(dateRange.from, 'dd MMM', { locale: id }) : ''} - {dateRange.to ? format(dateRange.to, 'dd MMM', { locale: id }) : ''}
+                {dateRange.from ? format(dateRange.from, 'dd MMM yyyy', { locale: id }) : ''} - {dateRange.to ? format(dateRange.to, 'dd MMM yyyy', { locale: id }) : ''}
               </span>
               <ChevronDown className="h-4 w-4 opacity-50" />
             </Button>
@@ -185,8 +186,24 @@ export function TransactionsPage({ transactions, settings }: TransactionsPagePro
                   to: dateRange.to
                 }}
                 onSelect={(range) => {
-                  if (range?.from && range?.to) {
-                    setDateRange({ from: range.from, to: range.to });
+                  if (!range) return;
+                  
+                  if (!isSelectingRange) {
+                    // Klik pertama - mulai range baru
+                    setDateRange({ from: range.from, to: range.from });
+                    setIsSelectingRange(true);
+                  } else {
+                    // Klik kedua - selesaikan range
+                    if (range.to) {
+                      // Pastikan from selalu <= to
+                      const from = range.from <= range.to ? range.from : range.to;
+                      const to = range.from <= range.to ? range.to : range.from;
+                      setDateRange({ from, to });
+                    } else {
+                      // Jika klik tanggal yang sama atau sebelum from
+                      setDateRange({ from: range.from, to: range.from });
+                    }
+                    setIsSelectingRange(false);
                   }
                 }}
                 numberOfMonths={2}
