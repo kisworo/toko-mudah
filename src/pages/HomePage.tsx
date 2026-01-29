@@ -15,16 +15,102 @@ import {
   Star,
   ArrowRight,
   Sparkles,
-  Heart
+  Heart,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export function HomePage() {
   const [mounted, setMounted] = useState(false);
+  const [currentTestimonial, setCurrentTestimonial] = useState(0);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTestimonial((prev) => (prev + 1) % 7);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const scrollToPricing = () => {
+    const element = document.getElementById('pricing-section');
+    element?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const testimonials = [
+    {
+      name: "Budi Santoso",
+      role: "Pemilik Warung Berkah",
+      content: "Sejak pakai Kasier, stok lebih terkontrol dan omset naik 30%. Sangat recommended!",
+      rating: 5,
+    },
+    {
+      name: "Siti Aminah",
+      role: "Owner Mart 99",
+      content: "Aplikasinya mudah banget dipakai. Karyawan saya juga cepat belajarnya.",
+      rating: 5,
+    },
+    {
+      name: "Ahmad Fauzi",
+      role: "Pengelola Minimarket",
+      content: "Laporannya lengkap, bisa analisis produk terlaris dengan mudah. Best banget lantaran gratis!",
+      rating: 5,
+    },
+    {
+      name: "Dewi Sartika",
+      role: "Pemilik Toko Kelontong",
+      content: "Dulu pusing catat stok manual, sekarang semua otomatis. Hidup jadi lebih mudah!",
+      rating: 5,
+    },
+    {
+      name: "Rahmat Hidayat",
+      role: "Owner Cafe Senja",
+      content: "Fitur cetak struk thermal-nya mantap, customer jadi lebih percaya.",
+      rating: 5,
+    },
+    {
+      name: "Linda Wijaya",
+      role: "Pengelola Butik",
+      content: "Tampilannya modern dan mudah dipahami. Customer saya juga suka lihat struknya.",
+      rating: 5,
+    },
+    {
+      name: "Agus Prasetyo",
+      role: "Pemilik Warkop",
+      content: "Gratis pula, sudah bagai mana lagi. Terima kasih Kasier!",
+      rating: 5,
+    },
+    {
+      name: "Rina Kartika",
+      role: "Manager Mini Market",
+      content: "Backup data otomatis bikin tenang, nggak takut data hilang.",
+      rating: 5,
+    },
+    {
+      name: "Doni Kurniawan",
+      role: "Pemilik Toko Bangunan",
+      content: "Support-nya responsif, ada kendala langsung dibantu. Top!",
+      rating: 5,
+    },
+  ];
+
+  const visibleTestimonials = [
+    testimonials[currentTestimonial],
+    testimonials[(currentTestimonial + 1) % testimonials.length],
+    testimonials[(currentTestimonial + 2) % testimonials.length],
+  ];
+
+  const nextTestimonial = () => {
+    setCurrentTestimonial((prev) => (prev + 1) % 7);
+  };
+
+  const prevTestimonial = () => {
+    setCurrentTestimonial((prev) => (prev - 1 + 7) % 7);
+  };
 
   return (
     <div className="flex flex-col pb-12 overflow-hidden">
@@ -55,12 +141,10 @@ export function HomePage() {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 mb-8 animate-scale-in">
-          <Link to="/register">
-            <Button size="lg" className="h-14 px-8 text-lg font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:scale-105">
-              Mulai Gratis Sekarang
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          </Link>
+          <Button size="lg" onClick={scrollToPricing} className="h-14 px-8 text-lg font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:scale-105">
+            Mulai Gratis Sekarang
+            <ArrowRight className="ml-2 h-5 w-5" />
+          </Button>
           <Link to="/login">
             <Button size="lg" variant="outline" className="h-14 px-8 text-lg font-semibold border-2 hover:bg-primary/5 transition-all">
               Demo Login
@@ -77,7 +161,7 @@ export function HomePage() {
             <div className="text-left">
               <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">Akun Demo</p>
               <p className="text-sm text-muted-foreground">
-                Username: <kbd className="px-2 py-0.5 bg-background rounded border font-mono text-sm">user</kbd>
+                Email: <kbd className="px-2 py-0.5 bg-background rounded border font-mono text-sm">demo@kasier.id</kbd>
                 {" "}| Password: <kbd className="px-2 py-0.5 bg-background rounded border font-mono text-sm">password</kbd>
               </p>
             </div>
@@ -208,41 +292,46 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section className="py-24 px-4">
+      {/* Pricing Section - Early Bird */}
+      <section id="pricing-section" className="py-24 px-4 scroll-mt-20">
         <div className="container mx-auto max-w-4xl">
           <div className="text-center mb-16">
-            <Badge className="mb-4 bg-green-500/10 text-green-600 border-green-500/20">
-              Promo Terbatas
+            <Badge className="mb-4 bg-amber-500/10 text-amber-600 border-amber-500/20">
+              <Sparkles className="w-3 h-3 mr-1" />
+              Early Bird Access
             </Badge>
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              Harga Terjangkau untuk Semua
+              Akses Full 1 Tahun - Gratis
             </h2>
             <p className="text-xl text-muted-foreground">
-              Mulai gratis, upgrade kapan saja sesuai kebutuhan
+              Terbatas untuk pengguna awal, kapan lagi?
             </p>
           </div>
 
           <div className="relative">
             {/* Glowing effect */}
-            <div className="absolute -inset-1 bg-gradient-to-r from-primary via-purple-500 to-pink-500 rounded-3xl blur-2xl opacity-20 animate-pulse" />
+            <div className="absolute -inset-1 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 rounded-3xl blur-2xl opacity-20 animate-pulse" />
 
-            <div className="relative bg-card rounded-3xl border-2 border-primary/20 shadow-2xl overflow-hidden">
-              <div className="absolute top-0 right-0 bg-gradient-to-r from-primary to-purple-500 text-white px-6 py-2 rounded-bl-2xl font-bold text-sm">
-                HEMAT 80%
+            <div className="relative bg-card rounded-3xl border-2 border-amber-500/20 shadow-2xl overflow-hidden">
+              <div className="absolute top-0 right-0 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-2 rounded-bl-2xl font-bold text-sm flex items-center gap-2">
+                <Zap className="h-4 w-4" />
+                LIMITED OFFER
               </div>
 
               <div className="p-8 md:p-12">
                 <div className="text-center mb-8">
-                  <h3 className="text-2xl font-bold mb-2">Paket Tahunan</h3>
-                  <p className="text-muted-foreground mb-6">Akses penuh selama 1 tahun</p>
+                  <h3 className="text-2xl font-bold mb-2">Early Bird Package</h3>
+                  <p className="text-muted-foreground mb-6">Akses full selama 1 tahun</p>
                   <div className="flex items-center justify-center gap-4">
-                    <span className="text-2xl text-muted-foreground line-through">Rp 500.000</span>
-                    <div className="text-5xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
-                      Rp 99.000
+                    <span className="text-2xl text-muted-foreground line-through">Rp 99.000/tahun</span>
+                    <div className="text-5xl font-bold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
+                      Rp 0
                     </div>
                   </div>
-                  <p className="text-muted-foreground mt-2">hanya Rp 8.250/bulan</p>
+                  <p className="text-amber-600 dark:text-amber-400 font-semibold mt-2">
+                    <Sparkles className="inline h-4 w-4 mr-1" />
+                    Gratis 1 tahun untuk early adopters
+                  </p>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4 mb-8">
@@ -266,15 +355,16 @@ export function HomePage() {
                 </div>
 
                 <Link to="/register">
-                  <Button className="w-full h-14 text-lg font-bold bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90 shadow-lg hover:shadow-xl transition-all hover:scale-[1.02]">
-                    Ambil Promo Sekarang
+                  <Button className="w-full h-14 text-lg font-bold bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-500/90 hover:to-orange-500/90 shadow-lg hover:shadow-xl transition-all hover:scale-[1.02]">
+                    <Sparkles className="mr-2 h-5 w-5" />
+                    Klaim Early Access Sekarang
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
                 </Link>
 
                 <p className="text-center text-sm text-muted-foreground mt-4">
                   <Shield className="inline h-4 w-4 mr-1" />
-                  Garansi uang kembali 30 hari
+                  Gratis 1 tahun penuh, tanpa biaya tersembunyi
                 </p>
               </div>
             </div>
@@ -292,40 +382,73 @@ export function HomePage() {
             </h2>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              {
-                name: "Budi Santoso",
-                role: "Pemilik Warung Berkah",
-                content: "Sejak pakai Kasier, stok lebih terkontrol dan omset naik 30%. Sangat recommended!",
-                rating: 5,
-              },
-              {
-                name: "Siti Aminah",
-                role: "Owner Mart 99",
-                content: "Aplikasinya mudah banget dipakai. Karyawan saya juga cepat belajarnya.",
-                rating: 5,
-              },
-              {
-                name: "Ahmad Fauzi",
-                role: "Pengelola Minimarket",
-                content: "Laporannya lengkap, bisa analisis produk terlaris dengan mudah. Harganya juga terjangkau.",
-                rating: 5,
-              },
-            ].map((testimonial, i) => (
-              <div key={i} className="p-6 bg-card rounded-2xl border shadow-sm hover:shadow-lg transition-shadow">
-                <div className="flex gap-1 mb-4">
-                  {Array.from({ length: testimonial.rating }).map((_, j) => (
-                    <Star key={j} className="h-4 w-4 fill-amber-400 text-amber-400" />
-                  ))}
-                </div>
-                <p className="text-muted-foreground mb-6">{testimonial.content}</p>
-                <div>
-                  <p className="font-semibold">{testimonial.name}</p>
-                  <p className="text-sm text-muted-foreground">{testimonial.role}</p>
-                </div>
+          {/* Carousel Navigation */}
+          <div className="relative">
+            <button
+              onClick={prevTestimonial}
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 p-2 bg-card rounded-full shadow-lg border hover:bg-primary hover:text-white transition-all hidden md:block"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              onClick={nextTestimonial}
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 p-2 bg-card rounded-full shadow-lg border hover:bg-primary hover:text-white transition-all hidden md:block"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+
+            <div className="overflow-hidden">
+              <div
+                className="grid md:grid-cols-3 gap-6 transition-all duration-500 ease-in-out"
+              >
+                {visibleTestimonials.map((testimonial, i) => (
+                  <div
+                    key={`${currentTestimonial}-${i}`}
+                    className="p-6 bg-card rounded-2xl border shadow-sm hover:shadow-lg transition-shadow"
+                  >
+                    <div className="flex gap-1 mb-4">
+                      {Array.from({ length: testimonial.rating }).map((_, j) => (
+                        <Star key={j} className="h-4 w-4 fill-amber-400 text-amber-400" />
+                      ))}
+                    </div>
+                    <p className="text-muted-foreground mb-6">{testimonial.content}</p>
+                    <div>
+                      <p className="font-semibold">{testimonial.name}</p>
+                      <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+
+            {/* Dots Indicator */}
+            <div className="flex justify-center gap-2 mt-8">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentTestimonial(i)}
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    currentTestimonial === i ? 'bg-primary w-6' : 'bg-muted-foreground/30'
+                  }`}
+                />
+              ))}
+            </div>
+
+            {/* Mobile Navigation */}
+            <div className="flex justify-center gap-4 mt-6 md:hidden">
+              <button
+                onClick={prevTestimonial}
+                className="p-2 bg-card rounded-full shadow-lg border"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button
+                onClick={nextTestimonial}
+                className="p-2 bg-card rounded-full shadow-lg border"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </div>
       </section>
