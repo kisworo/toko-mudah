@@ -1,4 +1,4 @@
-import { hashPassword, verifyPassword, generateToken, extractToken, verifyToken } from './auth';
+import { hashPassword, verifyPassword, generateToken, extractToken, verifyToken, type UserRole } from './auth';
 
 interface Env {
   DB: D1Database;
@@ -13,8 +13,16 @@ const corsHeaders = {
   'Cache-Control': 'no-store, no-cache, must-revalidate, private',
 };
 
+// Extended auth payload with role
+type AuthPayload = {
+  userId: string;
+  username: string;
+  email: string;
+  role: UserRole;
+};
+
 // Middleware to verify JWT token
-async function authenticateUser(request: Request): Promise<{ userId: string; username: string } | null> {
+async function authenticateUser(request: Request): Promise<AuthPayload | null> {
   const authHeader = request.headers.get('Authorization');
   const token = extractToken(authHeader);
 
@@ -23,13 +31,32 @@ async function authenticateUser(request: Request): Promise<{ userId: string; use
   }
 
   const payload = await verifyToken(token);
-  return payload ? { userId: payload.userId, username: payload.username } : null;
+  return payload as AuthPayload | null;
 }
 
 // Helper function to verify authentication and return user ID
 async function requireAuth(request: Request): Promise<string | null> {
   const authUser = await authenticateUser(request);
   return authUser ? authUser.userId : null;
+}
+
+// Helper function to require superadmin role
+async function requireSuperAdmin(request: Request, env: Env): Promise<{ userId: string; username: string } | null> {
+  const authUser = await authenticateUser(request);
+  if (!authUser) {
+    return null;
+  }
+
+  // Verify user is superadmin
+  const user = await env.DB.prepare(
+    'SELECT id, username, role FROM users WHERE id = ? AND role = ? AND is_active = 1'
+  ).bind(authUser.userId, 'superadmin').first() as any;
+
+  if (!user) {
+    return null;
+  }
+
+  return { userId: user.id, username: user.username };
 }
 
 export default {
@@ -77,16 +104,16 @@ export default {
         const timestamp = new Date().toISOString();
 
         await env.DB.prepare(
-          'INSERT INTO users (id, username, email, password_hash, full_name, is_demo, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-        ).bind(id, username, email, passwordHash, businessName || null, 0, timestamp, timestamp).run();
+          'INSERT INTO users (id, username, email, password_hash, full_name, is_demo, role, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        ).bind(id, username, email, passwordHash, businessName || null, 0, 'user', 1, timestamp, timestamp).run();
 
         // Generate token
-        const user = { id, username, email, full_name: businessName, is_demo: 0 };
+        const user = { id, username, email, full_name: businessName, is_demo: 0, role: 'user' as UserRole, is_active: 1 };
         const token = await generateToken(user);
 
         return Response.json(
           {
-            user: { id, username, email, full_name: businessName },
+            user: { id, username, email, full_name: businessName, role: 'user' },
             token,
           },
           { headers: corsHeaders }
@@ -127,6 +154,14 @@ export default {
           );
         }
 
+        // Check if user is active
+        if (user.is_active === 0) {
+          return Response.json(
+            { error: 'Akun tidak aktif. Silakan hubungi administrator.' },
+            { status: 403, headers: corsHeaders }
+          );
+        }
+
         // Generate token
         const token = await generateToken(user);
 
@@ -138,6 +173,8 @@ export default {
               email: user.email,
               full_name: user.full_name,
               is_demo: user.is_demo,
+              role: user.role,
+              is_active: user.is_active,
             },
             token,
           },
@@ -156,7 +193,7 @@ export default {
         }
 
         const user = await env.DB.prepare(
-          'SELECT id, username, email, full_name, is_demo, created_at FROM users WHERE id = ?'
+          'SELECT id, username, email, full_name, is_demo, role, is_active, created_at FROM users WHERE id = ?'
         ).bind(authUser.userId).first() as any;
 
         if (!user) {
@@ -605,6 +642,330 @@ export default {
         ).bind(userId).first();
 
         return Response.json(settings, { headers: corsHeaders });
+      }
+
+      // ===== SUPERADMIN ENDPOINTS (requires superadmin role) =====
+
+      // Get all users (superadmin only)
+      if (path === '/api/admin/users' && request.method === 'GET') {
+        const superAdmin = await requireSuperAdmin(request, env);
+        if (!superAdmin) {
+          return Response.json({ error: 'Forbidden - SuperAdmin access required' }, { status: 403, headers: corsHeaders });
+        }
+
+        const { results } = await env.DB.prepare(
+          'SELECT id, username, email, full_name, is_demo, role, is_active, created_at, updated_at FROM users ORDER BY created_at DESC'
+        ).all();
+
+        return Response.json(results, { headers: corsHeaders });
+      }
+
+      // Get user by ID (superadmin only)
+      if (path.startsWith('/api/admin/users/') && request.method === 'GET' && !path.includes('/toggle-active')) {
+        const superAdmin = await requireSuperAdmin(request, env);
+        if (!superAdmin) {
+          return Response.json({ error: 'Forbidden - SuperAdmin access required' }, { status: 403, headers: corsHeaders });
+        }
+
+        const userId = path.split('/').pop();
+        const user = await env.DB.prepare(
+          'SELECT id, username, email, full_name, is_demo, role, is_active, created_at, updated_at FROM users WHERE id = ?'
+        ).bind(userId).first();
+
+        if (!user) {
+          return Response.json({ error: 'User not found' }, { status: 404, headers: corsHeaders });
+        }
+
+        return Response.json(user, { headers: corsHeaders });
+      }
+
+      // Create user (superadmin only)
+      if (path === '/api/admin/users' && request.method === 'POST') {
+        const superAdmin = await requireSuperAdmin(request, env);
+        if (!superAdmin) {
+          return Response.json({ error: 'Forbidden - SuperAdmin access required' }, { status: 403, headers: corsHeaders });
+        }
+
+        const data = await request.json() as any;
+        const { username, email, password, full_name, role = 'user' } = data;
+
+        // Validate input
+        if (!username || !email || !password) {
+          return Response.json(
+            { error: 'Username, email, and password are required' },
+            { status: 400, headers: corsHeaders }
+          );
+        }
+
+        // Check if email already exists
+        const existingUser = await env.DB.prepare(
+          'SELECT id FROM users WHERE email = ?'
+        ).bind(email).first();
+
+        if (existingUser) {
+          return Response.json(
+            { error: 'Email already exists' },
+            { status: 409, headers: corsHeaders }
+          );
+        }
+
+        // Check if username already exists
+        const existingUsername = await env.DB.prepare(
+          'SELECT id FROM users WHERE username = ?'
+        ).bind(username).first();
+
+        if (existingUsername) {
+          return Response.json(
+            { error: 'Username already exists' },
+            { status: 409, headers: corsHeaders }
+          );
+        }
+
+        // Hash password and create user
+        const passwordHash = await hashPassword(password);
+        const id = crypto.randomUUID();
+        const timestamp = new Date().toISOString();
+
+        await env.DB.prepare(
+          'INSERT INTO users (id, username, email, password_hash, full_name, is_demo, role, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        ).bind(id, username, email, passwordHash, full_name || null, 0, role, 1, timestamp, timestamp).run();
+
+        const newUser = await env.DB.prepare(
+          'SELECT id, username, email, full_name, is_demo, role, is_active, created_at, updated_at FROM users WHERE id = ?'
+        ).bind(id).first();
+
+        return Response.json(newUser, { status: 201, headers: corsHeaders });
+      }
+
+      // Update user (superadmin only)
+      if (path.startsWith('/api/admin/users/') && request.method === 'PUT' && !path.includes('/toggle-active')) {
+        const superAdmin = await requireSuperAdmin(request, env);
+        if (!superAdmin) {
+          return Response.json({ error: 'Forbidden - SuperAdmin access required' }, { status: 403, headers: corsHeaders });
+        }
+
+        const userId = path.split('/').pop();
+        const data = await request.json() as any;
+
+        // Check if user exists
+        const existingUser = await env.DB.prepare(
+          'SELECT id FROM users WHERE id = ?'
+        ).bind(userId).first();
+
+        if (!existingUser) {
+          return Response.json({ error: 'User not found' }, { status: 404, headers: corsHeaders });
+        }
+
+        // Build update query
+        const updateFields: string[] = [];
+        const updateValues: any[] = [];
+
+        if (data.username !== undefined) {
+          // Check if new username is already taken
+          const usernameExists = await env.DB.prepare(
+            'SELECT id FROM users WHERE username = ? AND id != ?'
+          ).bind(data.username, userId).first();
+
+          if (usernameExists) {
+            return Response.json({ error: 'Username already exists' }, { status: 409, headers: corsHeaders });
+          }
+
+          updateFields.push('username = ?');
+          updateValues.push(data.username);
+        }
+
+        if (data.email !== undefined) {
+          // Check if new email is already taken
+          const emailExists = await env.DB.prepare(
+            'SELECT id FROM users WHERE email = ? AND id != ?'
+          ).bind(data.email, userId).first();
+
+          if (emailExists) {
+            return Response.json({ error: 'Email already exists' }, { status: 409, headers: corsHeaders });
+          }
+
+          updateFields.push('email = ?');
+          updateValues.push(data.email);
+        }
+
+        if (data.full_name !== undefined) {
+          updateFields.push('full_name = ?');
+          updateValues.push(data.full_name || null);
+        }
+
+        if (data.role !== undefined) {
+          updateFields.push('role = ?');
+          updateValues.push(data.role);
+        }
+
+        if (data.is_active !== undefined) {
+          updateFields.push('is_active = ?');
+          updateValues.push(data.is_active ? 1 : 0);
+        }
+
+        if (data.password !== undefined) {
+          const passwordHash = await hashPassword(data.password);
+          updateFields.push('password_hash = ?');
+          updateValues.push(passwordHash);
+        }
+
+        if (updateFields.length === 0) {
+          return Response.json({ error: 'No fields to update' }, { status: 400, headers: corsHeaders });
+        }
+
+        updateFields.push('updated_at = CURRENT_TIMESTAMP');
+        updateValues.push(userId);
+
+        await env.DB.prepare(
+          `UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`
+        ).bind(...updateValues).run();
+
+        const updatedUser = await env.DB.prepare(
+          'SELECT id, username, email, full_name, is_demo, role, is_active, created_at, updated_at FROM users WHERE id = ?'
+        ).bind(userId).first();
+
+        return Response.json(updatedUser, { headers: corsHeaders });
+      }
+
+      // Toggle user active status (superadmin only)
+      if (path.startsWith('/api/admin/users/') && path.endsWith('/toggle-active') && request.method === 'PUT') {
+        const superAdmin = await requireSuperAdmin(request, env);
+        if (!superAdmin) {
+          return Response.json({ error: 'Forbidden - SuperAdmin access required' }, { status: 403, headers: corsHeaders });
+        }
+
+        const userId = path.split('/')[4]; // /api/admin/users/{id}/toggle-active
+        const data = await request.json() as any;
+
+        // Check if user exists
+        const existingUser = await env.DB.prepare(
+          'SELECT id FROM users WHERE id = ?'
+        ).bind(userId).first();
+
+        if (!existingUser) {
+          return Response.json({ error: 'User not found' }, { status: 404, headers: corsHeaders });
+        }
+
+        // Prevent deactivating the last superadmin
+        if (data.is_active === false) {
+          const superAdminCount = await env.DB.prepare(
+            'SELECT COUNT(*) as count FROM users WHERE role = ? AND is_active = 1'
+          ).bind('superadmin').first() as any;
+
+          const targetUser = await env.DB.prepare(
+            'SELECT role FROM users WHERE id = ?'
+          ).bind(userId).first() as any;
+
+          if (targetUser.role === 'superadmin' && superAdminCount.count <= 1) {
+            return Response.json(
+              { error: 'Cannot deactivate the last superadmin' },
+              { status: 400, headers: corsHeaders }
+            );
+          }
+        }
+
+        await env.DB.prepare(
+          'UPDATE users SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+        ).bind(data.is_active ? 1 : 0, userId).run();
+
+        const updatedUser = await env.DB.prepare(
+          'SELECT id, username, email, full_name, is_demo, role, is_active, created_at, updated_at FROM users WHERE id = ?'
+        ).bind(userId).first();
+
+        return Response.json(updatedUser, { headers: corsHeaders });
+      }
+
+      // Delete user (superadmin only)
+      if (path.startsWith('/api/admin/users/') && request.method === 'DELETE') {
+        const superAdmin = await requireSuperAdmin(request, env);
+        if (!superAdmin) {
+          return Response.json({ error: 'Forbidden - SuperAdmin access required' }, { status: 403, headers: corsHeaders });
+        }
+
+        const userId = path.split('/').pop();
+
+        // Check if user exists
+        const existingUser = await env.DB.prepare(
+          'SELECT role FROM users WHERE id = ?'
+        ).bind(userId).first() as any;
+
+        if (!existingUser) {
+          return Response.json({ error: 'User not found' }, { status: 404, headers: corsHeaders });
+        }
+
+        // Prevent deleting the last superadmin
+        if (existingUser.role === 'superadmin') {
+          const superAdminCount = await env.DB.prepare(
+            'SELECT COUNT(*) as count FROM users WHERE role = ?'
+          ).bind('superadmin').first() as any;
+
+          if (superAdminCount.count <= 1) {
+            return Response.json(
+              { error: 'Cannot delete the last superadmin' },
+              { status: 400, headers: corsHeaders }
+            );
+          }
+        }
+
+        // Prevent self-deletion
+        if (userId === superAdmin.userId) {
+          return Response.json(
+            { error: 'Cannot delete your own account' },
+            { status: 400, headers: corsHeaders }
+          );
+        }
+
+        await env.DB.prepare('DELETE FROM users WHERE id = ?').bind(userId).run();
+
+        return Response.json({ success: true }, { headers: corsHeaders });
+      }
+
+      // Get admin statistics (superadmin only)
+      if (path === '/api/admin/stats' && request.method === 'GET') {
+        const superAdmin = await requireSuperAdmin(request, env);
+        if (!superAdmin) {
+          return Response.json({ error: 'Forbidden - SuperAdmin access required' }, { status: 403, headers: corsHeaders });
+        }
+
+        // Get total users
+        const totalUsersResult = await env.DB.prepare(
+          'SELECT COUNT(*) as count FROM users'
+        ).first() as any;
+
+        // Get active users
+        const activeUsersResult = await env.DB.prepare(
+          'SELECT COUNT(*) as count FROM users WHERE is_active = 1'
+        ).first() as any;
+
+        // Get inactive users
+        const inactiveUsersResult = await env.DB.prepare(
+          'SELECT COUNT(*) as count FROM users WHERE is_active = 0'
+        ).first() as any;
+
+        // Get new users today
+        const today = new Date().toISOString().split('T')[0];
+        const newUsersTodayResult = await env.DB.prepare(
+          "SELECT COUNT(*) as count FROM users WHERE DATE(created_at) = ?"
+        ).bind(today).first() as any;
+
+        // Get new users this week
+        const newUsersThisWeekResult = await env.DB.prepare(
+          "SELECT COUNT(*) as count FROM users WHERE created_at >= datetime('now', '-7 days')"
+        ).first() as any;
+
+        // Get new users this month
+        const newUsersThisMonthResult = await env.DB.prepare(
+          "SELECT COUNT(*) as count FROM users WHERE created_at >= datetime('now', '-30 days')"
+        ).first() as any;
+
+        return Response.json({
+          totalUsers: totalUsersResult.count,
+          activeUsers: activeUsersResult.count,
+          inactiveUsers: inactiveUsersResult.count,
+          newUsersToday: newUsersTodayResult.count,
+          newUsersThisWeek: newUsersThisWeekResult.count,
+          newUsersThisMonth: newUsersThisMonthResult.count,
+        }, { headers: corsHeaders });
       }
 
       // Serve static files for non-API routes

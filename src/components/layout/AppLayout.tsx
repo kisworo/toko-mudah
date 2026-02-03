@@ -9,7 +9,8 @@ import {
   X,
   Store,
   Settings,
-  LogOut
+  LogOut,
+  Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,8 @@ const navItems = [
   { path: '/transactions', label: 'Riwayat', icon: Receipt },
   { path: '/customers', label: 'Pelanggan', icon: Users },
 ];
+
+const adminNavItem = { path: '/admin', label: 'Admin', icon: Shield };
 
 export function AppLayout({ children, settings, onOpenSettings, isAuthenticated = false }: AppLayoutProps) {
   const location = useLocation();
@@ -55,6 +58,11 @@ export function AppLayout({ children, settings, onOpenSettings, isAuthenticated 
   };
 
   const showAuthNav = isAuthenticated && location.pathname !== "/";
+
+  // Check if user is superadmin
+  const userStr = localStorage.getItem('user');
+  const user = userStr ? JSON.parse(userStr) : null;
+  const isSuperAdmin = user?.role === 'superadmin';
 
   return (
     <div className="min-h-screen bg-background relative">
@@ -94,26 +102,42 @@ export function AppLayout({ children, settings, onOpenSettings, isAuthenticated 
           <nav className="hidden md:flex items-center gap-1">
             {showAuthNav ? (
               <>
-                {navItems.map(item => (
-                  <Link key={item.path} to={item.path}>
+                {!isSuperAdmin && (
+                  <>
+                    {navItems.map(item => (
+                      <Link key={item.path} to={item.path}>
+                        <Button
+                          variant={location.pathname === item.path ? 'default' : 'ghost'}
+                          size="sm"
+                          className="gap-2"
+                        >
+                          <item.icon className="h-4 w-4" />
+                          {item.label}
+                        </Button>
+                      </Link>
+                    ))}
                     <Button
-                      variant={location.pathname === item.path ? 'default' : 'ghost'}
+                      variant="ghost"
+                      size="icon"
+                      className="ml-2"
+                      onClick={onOpenSettings}
+                    >
+                      <Settings className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
+                {isSuperAdmin && (
+                  <Link to="/admin">
+                    <Button
+                      variant={location.pathname === '/admin' ? 'default' : 'ghost'}
                       size="sm"
                       className="gap-2"
                     >
-                      <item.icon className="h-4 w-4" />
-                      {item.label}
+                      <Shield className="h-4 w-4" />
+                      Admin
                     </Button>
                   </Link>
-                ))}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="ml-2"
-                  onClick={onOpenSettings}
-                >
-                  <Settings className="h-4 w-4" />
-                </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"
@@ -138,7 +162,7 @@ export function AppLayout({ children, settings, onOpenSettings, isAuthenticated 
 
           {/* Mobile Menu Button */}
           <div className="flex items-center gap-1 md:hidden">
-            {showAuthNav && (
+            {showAuthNav && !isSuperAdmin && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -162,7 +186,7 @@ export function AppLayout({ children, settings, onOpenSettings, isAuthenticated 
           <nav className="md:hidden border-t bg-card p-2 animate-fade-in">
             {showAuthNav ? (
               <>
-                {navItems.map(item => (
+                {!isSuperAdmin && navItems.map(item => (
                   <Link
                     key={item.path}
                     to={item.path}
@@ -177,6 +201,17 @@ export function AppLayout({ children, settings, onOpenSettings, isAuthenticated 
                     </Button>
                   </Link>
                 ))}
+                {isSuperAdmin && (
+                  <Link to="/admin" onClick={() => setMobileMenuOpen(false)}>
+                    <Button
+                      variant={location.pathname === '/admin' ? 'default' : 'ghost'}
+                      className="w-full justify-start gap-2 mb-1"
+                    >
+                      <Shield className="h-4 w-4" />
+                      Admin
+                    </Button>
+                  </Link>
+                )}
                 <Button
                   variant="ghost"
                   className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"

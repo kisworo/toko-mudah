@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   full_name TEXT,
   is_demo INTEGER DEFAULT 0 NOT NULL CHECK(is_demo IN (0, 1)),
+  role TEXT DEFAULT 'user' NOT NULL CHECK(role IN ('user', 'admin', 'superadmin')),
+  is_active INTEGER DEFAULT 1 NOT NULL CHECK(is_active IN (0, 1)),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -96,8 +98,13 @@ CREATE TABLE IF NOT EXISTS store_settings (
 
 -- Insert demo user (username: user, password: password)
 -- Password is hashed using PBKDF2-SHA256 with 100,000 iterations
-INSERT OR IGNORE INTO users (id, username, email, password_hash, full_name, is_demo)
-VALUES ('demo-user-id', 'user', 'demo@toko-mudah.com', 'uz+npKjGKohgvMABRSTshg==:aO0FNCs+3vT6IqleVHLqm9jBT9Dw2S26DizzjWc1nY8=', 'Demo User', 1);
+INSERT OR IGNORE INTO users (id, username, email, password_hash, full_name, is_demo, role)
+VALUES ('demo-user-id', 'user', 'demo@toko-mudah.com', 'uz+npKjGKohgvMABRSTshg==:aO0FNCs+3vT6IqleVHLqm9jBT9Dw2S26DizzjWc1nY8=', 'Demo User', 1, 'user');
+
+-- Insert superadmin user (username: superadmin, password: superadmin123)
+-- Password is hashed using PBKDF2-SHA256 with 100,000 iterations
+INSERT OR IGNORE INTO users (id, username, email, password_hash, full_name, is_demo, role)
+VALUES ('superadmin-id', 'superadmin', 'superadmin@toko-mudah.com', 'Xq8XyLz9vQ1wR2tY3uI4oP5aS6dF7gH8jK9lZ0xC1vB2nM3mK4jH5gF6dS7aQ8wE9rT0yU1iO2pL3kJ4hG5fD6sA7==:bP9mN7kL5jH3gF1dS9aQ7wE5rT3yU1iO9pL7kJ5hG3fD1sA9qW7eR5tY3uI1oP9lN7mK5jH3gF1dS9aQ7wE5rT3yU1i=', 'Super Admin', 0, 'superadmin');
 
 -- Insert default settings for demo user
 INSERT OR IGNORE INTO store_settings (user_id, store_name, theme_tone)

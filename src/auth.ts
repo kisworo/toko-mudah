@@ -5,18 +5,24 @@ const JWT_SECRET = 'toko-mudah-secret-key-change-in-production';
 const JWT_EXPIRY_DAYS = 7;
 const PBKDF2_ITERATIONS = 100000;
 
+export type UserRole = 'user' | 'admin' | 'superadmin';
+
 export interface User {
   id: string;
   username: string;
   email: string;
   full_name?: string;
   is_demo: number;
+  role: UserRole;
+  is_active: number;
+  created_at?: string;
 }
 
 export interface JwtUserPayload {
   userId: string;
   username: string;
   email: string;
+  role: UserRole;
 }
 
 /**
@@ -144,6 +150,7 @@ export async function generateToken(user: User): Promise<string> {
     userId: user.id,
     username: user.username,
     email: user.email,
+    role: user.role,
     iat: now,
     exp: exp,
   };
@@ -163,9 +170,10 @@ export async function verifyToken(token: string): Promise<JwtUserPayload | null>
     }
 
     return {
-      userId: result.payload.sub || result.payload.userId || '',
-      username: result.payload.username || '',
-      email: result.payload.email || '',
+      userId: (result.payload as any).sub || (result.payload as any).userId || '',
+      username: (result.payload as any).username || '',
+      email: (result.payload as any).email || '',
+      role: (result.payload as any).role || 'user',
     };
   } catch {
     return null;

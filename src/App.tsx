@@ -14,6 +14,7 @@ import { Navigate } from "react-router-dom";
 import { ProductsPage } from "@/pages/ProductsPage";
 import { TransactionsPage } from "@/pages/TransactionsPage";
 import { CustomersPage } from "@/pages/CustomersPage";
+import { SuperAdminPage } from "@/pages/admin/SuperAdminPage";
 import { SettingsModal } from "@/components/settings/SettingsModal";
 import { useStore } from "@/hooks/useStore";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
@@ -26,6 +27,23 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+  
+  return <>{children}</>;
+}
+
+function SuperAdminRoute({ children }: { children: React.ReactNode }) {
+  const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
+  const userStr = localStorage.getItem("user");
+  const user = userStr ? JSON.parse(userStr) : null;
+  const isSuperAdmin = user?.role === "superadmin";
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (!isSuperAdmin) {
+    return <Navigate to="/cashier" replace />;
   }
   
   return <>{children}</>;
@@ -132,6 +150,14 @@ function AppContent() {
                 onDeleteCustomer={deleteCustomer}
               />
             </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <SuperAdminRoute>
+              <SuperAdminPage />
+            </SuperAdminRoute>
           }
         />
         <Route path="*" element={<NotFound />} />

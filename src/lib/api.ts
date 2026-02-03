@@ -53,12 +53,17 @@ export interface StoreSettings {
   store_logo?: string;
 }
 
+export type UserRole = 'user' | 'admin' | 'superadmin';
+
 export interface User {
   id: string;
   username: string;
   email: string;
   full_name?: string;
   is_demo?: number;
+  role: UserRole;
+  is_active?: number;
+  created_at?: string;
 }
 
 export interface AuthResponse {
@@ -246,6 +251,60 @@ class ApiClient {
       method: 'PUT',
       body: JSON.stringify(data),
     });
+  }
+
+  // SuperAdmin - User Management
+  getAllUsers(): Promise<User[]> {
+    return this.request<User[]>('/api/admin/users');
+  }
+
+  getUserById(id: string): Promise<User> {
+    return this.request<User>(`/api/admin/users/${id}`);
+  }
+
+  createUser(data: {
+    username: string;
+    email: string;
+    password: string;
+    full_name?: string;
+    role?: UserRole;
+  }): Promise<User> {
+    return this.request<User>('/api/admin/users', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  updateUser(id: string, data: Partial<User>): Promise<User> {
+    return this.request<User>(`/api/admin/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  deleteUser(id: string): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/api/admin/users/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  toggleUserActive(id: string, isActive: boolean): Promise<User> {
+    return this.request<User>(`/api/admin/users/${id}/toggle-active`, {
+      method: 'PUT',
+      body: JSON.stringify({ is_active: isActive }),
+    });
+  }
+
+  // SuperAdmin - Statistics
+  getAdminStats(): Promise<{
+    totalUsers: number;
+    activeUsers: number;
+    inactiveUsers: number;
+    newUsersToday: number;
+    newUsersThisWeek: number;
+    newUsersThisMonth: number;
+  }> {
+    return this.request('/api/admin/stats');
   }
 }
 
